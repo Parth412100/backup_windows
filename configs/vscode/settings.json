@@ -1,0 +1,29 @@
+{
+    "cmake.showOptionsMovedNotification": false,
+    "editor.unicodeHighlight.nonBasicASCII": false,
+    "code-runner.runInTerminal": true,
+    "editor.unicodeHighlight.invisibleCharacters": false,
+    "workbench.editorAssociations": {
+        "*.c": "default"
+    },
+    "security.workspace.trust.untrustedFiles": "open",
+    "editor.largeFileOptimizations": false,
+    "tabnine.experimentalAutoImports": true,
+    "liveServer.settings.donotShowInfoMsg": true,
+    "workbench.editor.empty.hint": "hidden",
+    "codetour.showMarkers": false,
+    "github.copilot.enable": {
+        "*": true,
+        "plaintext": false,
+        "markdown": false,
+        "scminput": false,
+        "java": false
+    },
+    "window.menuBarVisibility": "compact",
+    "workbench.activityBar.location": "top",
+    "window.commandCenter": false,
+    "workbench.colorTheme": "Catppuccin Mocha",
+    "workbench.iconTheme": "catppuccin-mocha",
+    "vscode-pets.theme": "forest",
+    "vscode-pets.throwBallWithMouse": true
+}

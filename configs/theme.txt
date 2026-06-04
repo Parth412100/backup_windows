@@ -1,0 +1,3 @@
+﻿AppsUseLightTheme=0
+SystemUsesLightTheme=0
+ColorPrevalence=1
