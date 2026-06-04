@@ -1,0 +1,49 @@
+﻿MANUAL INSTALL CHECKLIST
+Generated: 2026-06-04 14:06:45
+Computer: PARTYBOY
+
+These programs could not be automatically matched to a winget ID.
+Install them manually after restore.
+
+- Acer Configuration Manager
+- Android System Key Verifier
+- Android System WebView
+- Drive
+- Freedom Fighters
+- Genshin Impact
+- Google Partner Setup
+- Google Play services
+- Google Play Services for AR
+- HoYoPlay
+- Kits Configuration Installer
+- Microsoft Update Health Tools
+- Microsoft Visual Studio Installer
+- Microsoft Visual Studio Setup Configuration
+- Microsoft Visual Studio Setup WMI Provider
+- Mozilla Maintenance Service
+- Need for Speed - Underground 2
+- Need for Speed - Underground 2 Fix
+- NitroSense Config
+- NitroSense Installer
+- NitroSense Prerequisites
+- Node.js
+- NvCpl
+- NVIDIA AIUser Container
+- NVIDIA Backend
+- NVIDIA Container
+- NVIDIA LocalSystem Container
+- NVIDIA MessageBus 3 for NvApp
+- NVIDIA NvDLISR
+- NVIDIA Platform Controllers and Framework
+- NVIDIA Session Container
+- NVIDIA User Container
+- NVIDIA Watchdog Plugin for NvContainer
+- Photopea
+- Play Store
+- vs_CoreEditorFonts
+- vs_FileTracker_Singleton
+- Wallpaper Engine
+- Windows SDK AddOn
+- Windows Subsystem for Linux
+- YouTube
+

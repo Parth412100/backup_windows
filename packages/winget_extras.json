@@ -1,0 +1,29 @@
+﻿{
+    "CreationDate":  "2026-06-04T08:36:45.7914082Z",
+    "Sources":  [
+                    {
+                        "SourceDetails":  {
+                                              "Argument":  "https://cdn.winget.microsoft.com/cache",
+                                              "Type":  "Microsoft.PreIndexed.Package",
+                                              "Name":  "winget",
+                                              "Identifier":  "Microsoft.Winget.Source_8wekyb3d8bbwe"
+                                          },
+                        "Packages":  [
+                                         {
+                                             "PackageIdentifier":  "VideoLAN.VLC"
+                                         },
+                                         {
+                                             "PackageIdentifier":  "WinDirStat.WinDirStat"
+                                         },
+                                         {
+                                             "PackageIdentifier":  "qBittorrent.qBittorrent"
+                                         },
+                                         {
+                                             "PackageIdentifier":  "Google.Chrome"
+                                         }
+                                     ]
+                    }
+                ],
+    "$schema":  "https://aka.ms/winget-packages.schema.2.0.json",
+    "WinGetVersion":  "1.28.240"
+}

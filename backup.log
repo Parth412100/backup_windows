@@ -34,3 +34,33 @@
 [2026-06-04 14:00:16] 
 [2026-06-04 14:00:16] On a FRESH WINDOWS INSTALL, copy this folder and run:
 [2026-06-04 14:00:16]     PowerShell -ExecutionPolicy Bypass -File restore.ps1
+[2026-06-04 14:04:20] === WINDOWS CONFIG BACKUP ===
+[2026-06-04 14:04:20] Backup to: D:\opencode\backup_windows
+[2026-06-04 14:04:26] Exporting package lists...
+[2026-06-04 14:04:41]   Matched: VLC media player -> VideoLAN.VLC
+[2026-06-04 14:04:43]   Matched: WinDirStat -> WinDirStat.WinDirStat
+[2026-06-04 14:05:06]   Matched: qBittorrent -> qBittorrent.qBittorrent
+[2026-06-04 14:05:33]   Matched: Google -> Google.Chrome
+[2026-06-04 14:05:49]   4 additional winget IDs matched
+[2026-06-04 14:05:49]   44 programs need manual install (see packages\manual_install.txt)
+[2026-06-04 14:05:51] === BACKUP COMPLETE ===
+[2026-06-04 14:05:51] Size: 0.55 MB (no photos/videos included)
+[2026-06-04 14:05:51] Manifest: D:\opencode\backup_windows\manifest.txt
+[2026-06-04 14:05:51] 
+[2026-06-04 14:05:51] On a FRESH WINDOWS INSTALL, copy this folder and run:
+[2026-06-04 14:05:51]     PowerShell -ExecutionPolicy Bypass -File restore.ps1
+[2026-06-04 14:06:20] === WINDOWS CONFIG BACKUP ===
+[2026-06-04 14:06:20] Backup to: D:\opencode\backup_windows
+[2026-06-04 14:06:26] Exporting package lists...
+[2026-06-04 14:06:37]   Matched: VLC media player -> VideoLAN.VLC
+[2026-06-04 14:06:38]   Matched: WinDirStat -> WinDirStat.WinDirStat
+[2026-06-04 14:06:45]   Matched: qBittorrent -> qBittorrent.qBittorrent
+[2026-06-04 14:06:45]   Matched: Google -> Google.Chrome
+[2026-06-04 14:06:45]   4 additional winget IDs matched
+[2026-06-04 14:06:45]   41 programs need manual install (see packages\manual_install.txt)
+[2026-06-04 14:06:47] === BACKUP COMPLETE ===
+[2026-06-04 14:06:47] Size: 0.55 MB (no photos/videos included)
+[2026-06-04 14:06:47] Manifest: D:\opencode\backup_windows\manifest.txt
+[2026-06-04 14:06:47] 
+[2026-06-04 14:06:47] On a FRESH WINDOWS INSTALL, copy this folder and run:
+[2026-06-04 14:06:47]     PowerShell -ExecutionPolicy Bypass -File restore.ps1

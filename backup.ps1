@@ -137,6 +137,173 @@ foreach ($path in @("HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*
 }
 $progs | Sort-Object Name | Export-Csv "$BackupDir\packages\installed_programs.csv" -NoTypeInformation
 
+# Match installed programs to winget IDs and generate manual install list
+try {
+    $existingIds = @()
+    $wingetJsonPath = "$BackupDir\packages\winget.json"
+    if (Test-Path $wingetJsonPath) {
+        $wingetData = Get-Content $wingetJsonPath -Raw | ConvertFrom-Json
+        $existingIds = $wingetData.Sources.Packages.PackageIdentifier
+    }
+
+    $knownMap = @{
+        'qBittorrent'         = 'qBittorrent.qBittorrent'
+        'WinDirStat'          = 'WinDirStat.WinDirStat'
+        'Microsoft Edge'      = 'Microsoft.Edge'
+        'MSN Weather'         = 'Microsoft.BingWeather'
+        'Microsoft Clipchamp' = 'Microsoft.Clipchamp'
+        'Windows Notepad'     = 'Microsoft.WindowsNotepad'
+        'Windows Camera'      = 'Microsoft.WindowsCamera'
+        'Microsoft Photos'    = 'Microsoft.Windows.Photos'
+        'Microsoft Sticky Notes' = 'Microsoft.MicrosoftStickyNotes'
+        'Windows Clock'       = 'Microsoft.WindowsAlarms'
+        'Snipping Tool'       = 'Microsoft.ScreenSketch'
+        'Paint'               = 'Microsoft.Paint'
+        'Phone Link'          = 'Microsoft.YourPhone'
+        'PC Manager'          = 'Microsoft.PCManager'
+        'ChatGPT'             = 'OpenAI.ChatGPT'
+        'Discord'             = 'Discord.Discord'
+        'Mozilla Firefox'     = 'Mozilla.Firefox'
+        'Google Chrome'       = 'Google.Chrome'
+        '7-Zip'               = '7zip.7zip'
+        'PowerToys'           = 'Microsoft.PowerToys'
+        'Spotify'             = 'Spotify.Spotify'
+        'ShareX'              = 'ShareX.ShareX'
+        'OBS Studio'          = 'OBSProject.OBSStudio'
+        'Docker Desktop'      = 'Docker.DockerDesktop'
+        'Postman'             = 'Postman.Postman'
+        'Figma'               = 'Figma.Figma'
+        'Slack'               = 'SlackTechnologies.Slack'
+        'Zoom'                = 'Zoom.Zoom'
+        'Wireshark'           = 'WiresharkFoundation.Wireshark'
+        'ffmpeg'              = 'FFmpeg.FFmpeg'
+        'mpv'                 = 'mpv.Mpv'
+        'GIMP'                = 'GIMP.GIMP'
+        'Inkscape'            = 'Inkscape.Inkscape'
+        'Blender'             = 'BlenderFoundation.Blender'
+        'Audacity'            = 'Audacity.Audacity'
+        'VLC'                 = 'VideoLAN.VLC'
+        'Everything'          = 'voidtools.Everything'
+        'Greenshot'           = 'Greenshot.Greenshot'
+        'CPU-Z'               = 'CPUID.CPU-Z'
+        'GPU-Z'               = 'TechPowerUp.GPU-Z'
+        'HWMonitor'           = 'CPUID.HWMonitor'
+        'Rufus'               = 'Rufus.Rufus'
+        'BalenaEtcher'        = 'Balena.Etcher'
+        'Adobe Acrobat'       = 'Adobe.Acrobat.Reader.64-bit'
+    }
+
+    function Add-PackageMatch {
+        param([string]$Name, [string]$Id)
+        $script:matchedIds[$Id] = $true
+        $script:wingetExtras += $Id
+        Write-Log "  Matched: $Name -> $Id"
+    }
+
+    $wingetExtras = @()
+    $matchedIds = @{}
+    $manualOnly = @()
+    $searched = @{}
+
+    # Clean app name for matching
+    foreach ($p in $progs) {
+        $name = $p.Name.Trim()
+        $lowerName = $name.ToLower()
+
+        # Remove trailing publisher/version info for matching
+        $cleanName = $name -replace ' \(64-bit\)$| \(x64\)$| \(x86\)$| version .*$| \d+\.\d+.*$', ''
+        # Check if already in winget export
+        $alreadyExported = $false
+        foreach ($id in $existingIds) {
+            $idSlug = $id.Split('.')[-1].ToLower()
+            $nameFlat = $lowerName -replace '[^a-zA-Z0-9]', ''
+            $idFlat = $idSlug -replace '[^a-zA-Z0-9]', ''
+            if ($nameFlat -eq $idFlat -or $nameFlat -match [regex]::Escape($idFlat)) {
+                $alreadyExported = $true; break
+            }
+        }
+        if ($alreadyExported) { continue }
+
+        # Skip known non-winget patterns
+        if ($lowerName -match '^(nvidia |acer |nitrosense|microsoft visual (c|c\+\+|studio )|vs_|windows (sdk|app |advanced|security|package )|sql server|ue4 |ue |launcher prerequisites|mozilla maintenance|github lfs|entity framework|kits configuration|redlauncher|nvcpl|gdr \d+ for sql|one.?note|speech pack|intel®|dts |cross device|android |play store|google (partner|play )|photopea|youtube|drive$|linkedin$|whatsapp$|epub|pptx|ePub File)') { $manualOnly += $name; continue }
+
+        # Skip Python sub-components (already have the launcher)
+        if ($lowerName -match '^python \d.*(core interpreter|add to path|development|libraries|documentation|executables|pip bootstrap|standard library|tcl|test suite|utility)') { continue }
+        if ($lowerName -match '^python \d+\.\d+\.\d+$') {
+            $ver = $name -replace '.*?(\d+\.\d+\.\d+).*', '$1'
+            $major = $ver -replace '\..*', ''
+            $id = "Python.Python.$major"
+            if (-not $matchedIds.ContainsKey($id)) { Add-PackageMatch $name $id }
+            continue
+        }
+
+        # Check curated mapping
+        $found = $false
+        foreach ($key in $knownMap.Keys) {
+            if ($cleanName -match [regex]::Escape($key) -or $key -match [regex]::Escape($cleanName)) {
+                $id = $knownMap[$key]
+                if (-not $matchedIds.ContainsKey($id)) { Add-PackageMatch $cleanName $id; $found = $true; break }
+            }
+        }
+        if ($found) { continue }
+
+        # Try winget search for remaining apps
+        try {
+            $searchResult = winget search --name "`"$cleanName`"" --exact --accept-source-agreements 2>$null
+            if ($searchResult -match $cleanName) {
+                # Parse the winget ID from search output
+                $lines = $searchResult -split "`n" | Where-Object { $_ -match '\S' }
+                if ($lines.Count -ge 3) {
+                    $headerLine = $lines[1]
+                    $idStart = $headerLine.IndexOf('Id')
+                    $firstResult = $lines[2]
+                    if ($idStart -ge 0 -and $firstResult.Length -gt $idStart) {
+                        $foundId = $firstResult.Substring($idStart).Trim().Split(' ')[0]
+                        if ($foundId -and $foundId.Contains('.')) {
+                            if (-not $matchedIds.ContainsKey($foundId)) { Add-PackageMatch $cleanName $foundId; $found = $true }
+                        }
+                    }
+                }
+            }
+        } catch {}
+        if (-not $found) { $manualOnly += $name }
+    }
+
+    # Export extras
+    if ($wingetExtras.Count -gt 0) {
+        $extrasJson = @{
+            '$schema' = 'https://aka.ms/winget-packages.schema.2.0.json'
+            CreationDate = (Get-Date).ToUniversalTime().ToString('o')
+            Sources = @(@{
+                Packages = $wingetExtras | ForEach-Object { @{PackageIdentifier = $_} }
+                SourceDetails = @{
+                    Argument = 'https://cdn.winget.microsoft.com/cache'
+                    Identifier = 'Microsoft.Winget.Source_8wekyb3d8bbwe'
+                    Name = 'winget'
+                    Type = 'Microsoft.PreIndexed.Package'
+                }
+            })
+            WinGetVersion = '1.28.240'
+        }
+        $extrasJson | ConvertTo-Json -Depth 4 | Out-File "$BackupDir\packages\winget_extras.json" -Encoding utf8
+        Write-Log "  $($wingetExtras.Count) additional winget IDs matched"
+    }
+
+    if ($manualOnly.Count -gt 0) {
+        @"
+MANUAL INSTALL CHECKLIST
+Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+Computer: $env:COMPUTERNAME
+
+These programs could not be automatically matched to a winget ID.
+Install them manually after restore.
+
+$($manualOnly | Sort-Object | ForEach-Object { "- $_" } | Out-String)
+"@ | Out-File "$BackupDir\packages\manual_install.txt" -Encoding utf8
+        Write-Log "  $($manualOnly.Count) programs need manual install (see packages\manual_install.txt)"
+    }
+} catch { Write-Log "  Winget matching skipped (error: $($_.Exception.Message))" }
+
 # Windows Features
 try { Get-WindowsOptionalFeature -Online | Where-Object State -eq Enabled | Select-Object FeatureName, State |
     Export-Csv "$BackupDir\packages\windows_features.csv" -NoTypeInformation } catch {}

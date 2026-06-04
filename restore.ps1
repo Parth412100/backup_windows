@@ -217,13 +217,19 @@ if (Test-Path $wmFile) {
 Write-Log "`n[3/9] Installing applications from backup..."
 
 $wf = "$BackupDir\packages\winget.json"
+$wfExtra = "$BackupDir\packages\winget_extras.json"
 if (Test-File $wf) {
     if (-not $DryRun) {
         Write-Host "  Installing apps via winget (this may take a while)..."
         winget import -i "$wf" --accept-source-agreements --accept-package-agreements 2>&1 | ForEach-Object { Write-Host "     $_" }
+        # Also install any extra matched packages
+        if (Test-Path $wfExtra) {
+            winget import -i "$wfExtra" --accept-source-agreements --accept-package-agreements 2>&1 | ForEach-Object { Write-Host "     $_" }
+        }
         Write-Log "  Winget packages installed"
     } else {
         Write-Log "  [DRY RUN] Would run: winget import -i `"$wf`""
+        if (Test-Path $wfExtra) { Write-Log "  [DRY RUN] Also import winget_extras.json" }
     }
 } else {
     Write-Log "  No winget package list found"
@@ -522,6 +528,14 @@ Write-Log "  Log: $log"
 if (-not $DryRun) {
     Write-Log "  Some changes need a reboot or logoff to take effect."
     Write-Log "  Run this to restart Explorer:  taskkill /f /im explorer.exe & start explorer"
+}
+$manualFile = "$BackupDir\packages\manual_install.txt"
+if (Test-Path $manualFile) {
+    $manualCount = (Get-Content $manualFile | Where-Object { $_ -match '^- ' }).Count
+    if ($manualCount -gt 0) {
+        Write-Log "  $manualCount programs need manual install"
+        Write-Log "  See: packages\manual_install.txt"
+    }
 }
 Write-Log ""
 Write-Log "  To re-run on a different machine, just copy the"
