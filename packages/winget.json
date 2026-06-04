@@ -1,6 +1,6 @@
 {
 	"$schema" : "https://aka.ms/winget-packages.schema.2.0.json",
-	"CreationDate" : "2026-06-04T10:45:09.900-00:00",
+	"CreationDate" : "2026-06-04T14:00:14.060-00:00",
 	"Sources" : 
 	[
 		{
@@ -50,6 +50,9 @@
 				},
 				{
 					"PackageIdentifier" : "GitHub.cli"
+				},
+				{
+					"PackageIdentifier" : "Oracle.VirtualBox"
 				},
 				{
 					"PackageIdentifier" : "Microsoft.VCRedist.2008.x64"

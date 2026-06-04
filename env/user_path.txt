@@ -1,9 +1,17 @@
-﻿C:\Users\Parth Shinde\AppData\Local\Microsoft\WindowsApps
+﻿C:\Users\Parth Shinde\scoop\shims
+C:\Users\Parth Shinde\AppData\Local\Microsoft\WindowsApps
 C:\Users\Parth Shinde\AppData\Local\GitHubDesktop\bin
+C:\ffmpeg\ffmpeg.exe
 C:\ffmpeg\bin
+C:\ffmpeg\bin\ffmpeg.exe
 C:\msys64\ucrt64\bin
+C:\ffmpeg
 C:\Users\Parth Shinde\AppData\Local\Microsoft\WinGet\Links
 C:\Users\Parth Shinde\AppData\Local\Programs\Ollama
+C:\Users\Parth Shinde\AppData\Local\Microsoft\WinGet\Packages\Google.PlatformTools_Microsoft.Winget.Source_8wekyb3d8bbwe\platform-tools
+C:\Users\Parth Shinde\Downloads\platform-tools-latest-windows\platform-tools
+C:\Users\Parth Shinde\Downloads\mpv-x86_64-20260507-git-cfd818bcae\mpv.exe
+C:\Users\Parth Shinde\AppData\Local\Microsoft\WinGet\Packages\yt-dlp.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-N-124279-g0f6ba39122-win64-gpl\bin
 C:\Users\Parth Shinde\AppData\Local\Voidstar\FilePilot
 C:\Users\Parth Shinde\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\Scripts
 C:\Users\Parth Shinde\AppData\Local\Programs\Microsoft VS Code\bin

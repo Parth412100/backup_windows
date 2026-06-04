@@ -117,7 +117,7 @@ $sysPath -split ';'  | Where-Object { $_ } | Out-File "$BackupDir\env\system_pat
 Write-Log "Exporting package lists..."
 
 # winget
-try { winget export -o "$BackupDir\packages\winget.json" --accept-source-agreements --accept-package-agreements 2>$null } catch {}
+try { winget export -o "$BackupDir\packages\winget.json" --accept-source-agreements 2>$null } catch {}
 # chocolatey
 try { if (Get-Command choco -ErrorAction SilentlyContinue) { choco list -lo -r | Out-File "$BackupDir\packages\chocolatey.txt" -Encoding utf8 } } catch {}
 # scoop

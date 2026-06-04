@@ -1,5 +1,5 @@
 "TaskName","TaskPath","State","Description"
-"AHK Fast Start","\","Running",
+"AHK Fast Start","\","Ready",
 "CreateExplorerShellUnelevatedTask","\","Ready",
 "MiniToolPartitionWizard","\","Ready",
 "NitroSenseLauncher","\","Ready",
@@ -12,5 +12,5 @@
 "Zen Background Update S-1-5-21-771876326-1644897007-41128627-1001 F0DC299D809B9700","\Mozilla\","Ready","The Background Update task checks for updates to Zen when Zen is not running. This task is installed automatically by Zen, and is reinstalled when Zen runs. To disable this task, update the browser settings or the Zen enterprise policy setting ?BackgroundAppUpdate?."
 "Zen Default Browser Agent F0DC299D809B9700","\Mozilla\","Ready","The Default Browser Agent task checks when the default changes from Zen to another browser. If the change happens under suspicious circumstances, it will prompt users to change back to Zen no more than two times. This task is installed automatically by Zen, and is reinstalled when Zen updates. To disable this task, update the ?default-browser-agent.enabled? preference on the about:config page or the Zen enterprise policy setting ?DisableDefaultBrowserAgent?."
 "SoftLandingCreativeManagementTask","\SoftLanding\S-1-5-21-771876326-1644897007-41128627-1001\","Ready",
-"SoftLandingDeferralTask-{7a316641-d7e2-44e0-8c92-26304f587dc6}","\SoftLanding\S-1-5-21-771876326-1644897007-41128627-1001\","Ready",
-"SoftLandingTriggerTask-128000000001615609-render-{7dbea747-df33-4c61-834b-5830a069739b}","\SoftLanding\S-1-5-21-771876326-1644897007-41128627-1001\","Disabled",
+"SoftLandingDeferralTask-{a016a5a4-3583-4d27-afa2-944cd2772a8f}","\SoftLanding\S-1-5-21-771876326-1644897007-41128627-1001\","Ready",
+"SoftLandingTriggerTask-128000000001615609-render-{5f9e6b74-8d62-4e81-9e59-50de491ca0a9}","\SoftLanding\S-1-5-21-771876326-1644897007-41128627-1001\","Disabled",

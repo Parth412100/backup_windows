@@ -1,5 +1,5 @@
 ﻿Windows Config Backup - Manifest
-Generated: 2026-06-04 10:44:58
+Generated: 2026-06-04 14:00:04
 Computer: PARTYBOY
 User: Parth Shinde
 OS: Microsoft Windows 11 Home Single Language

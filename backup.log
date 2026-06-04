@@ -16,3 +16,21 @@
 [2026-06-04 10:45:12] 
 [2026-06-04 10:45:12] On a FRESH WINDOWS INSTALL, copy this folder and run:
 [2026-06-04 10:45:12]     PowerShell -ExecutionPolicy Bypass -File restore.ps1
+[2026-06-04 13:59:20] === WINDOWS CONFIG BACKUP ===
+[2026-06-04 13:59:20] Backup to: D:\opencode\backup_windows
+[2026-06-04 13:59:26] Exporting package lists...
+[2026-06-04 13:59:30] === BACKUP COMPLETE ===
+[2026-06-04 13:59:30] Size: 0.53 MB (no photos/videos included)
+[2026-06-04 13:59:30] Manifest: D:\opencode\backup_windows\manifest.txt
+[2026-06-04 13:59:30] 
+[2026-06-04 13:59:30] On a FRESH WINDOWS INSTALL, copy this folder and run:
+[2026-06-04 13:59:30]     PowerShell -ExecutionPolicy Bypass -File restore.ps1
+[2026-06-04 14:00:04] === WINDOWS CONFIG BACKUP ===
+[2026-06-04 14:00:04] Backup to: D:\opencode\backup_windows
+[2026-06-04 14:00:10] Exporting package lists...
+[2026-06-04 14:00:16] === BACKUP COMPLETE ===
+[2026-06-04 14:00:16] Size: 0.54 MB (no photos/videos included)
+[2026-06-04 14:00:16] Manifest: D:\opencode\backup_windows\manifest.txt
+[2026-06-04 14:00:16] 
+[2026-06-04 14:00:16] On a FRESH WINDOWS INSTALL, copy this folder and run:
+[2026-06-04 14:00:16]     PowerShell -ExecutionPolicy Bypass -File restore.ps1
