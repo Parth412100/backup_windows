@@ -225,15 +225,16 @@ try {
         if ($alreadyExported) { continue }
 
         # Skip known non-winget patterns
-        if ($lowerName -match '^(nvidia |acer |nitrosense|microsoft visual (c|c\+\+|studio )|vs_|windows (sdk|app |advanced|security|package )|sql server|ue4 |ue |launcher prerequisites|mozilla maintenance|github lfs|entity framework|kits configuration|redlauncher|nvcpl|gdr \d+ for sql|one.?note|speech pack|intel®|dts |cross device|android |play store|google (partner|play )|photopea|youtube|drive$|linkedin$|whatsapp$|epub|pptx|ePub File)') { $manualOnly += $name; continue }
+        if ($lowerName -match '^(nvidia |acer |nitrosense|microsoft visual (c|c\+\+|studio )|vs_|windows (sdk|app |advanced|security|package )|sql server|ue4 |ue |launcher prerequisites|mozilla maintenance|github lfs|entity framework|kits configuration|redlauncher|nvcpl|gdr \d+ for sql|one.?note|speech pack|intel®|dts |cross device|android |play store|google$|google (partner|play )|photopea|youtube|drive$|linkedin$|whatsapp$|epub|pptx|ePub File)') { $manualOnly += $name; continue }
 
         # Skip Python sub-components (already have the launcher)
         if ($lowerName -match '^python \d.*(core interpreter|add to path|development|libraries|documentation|executables|pip bootstrap|standard library|tcl|test suite|utility)') { continue }
-        if ($lowerName -match '^python \d+\.\d+\.\d+$') {
-            $ver = $name -replace '.*?(\d+\.\d+\.\d+).*', '$1'
-            $major = $ver -replace '\..*', ''
+        $cleanLower = $cleanName.ToLower()
+        if ($cleanLower -match '^python \d+\.\d+\.\d+$') {
+            $ver = ($cleanName -split ' ')[1]
+            $major = ($ver -split '\.')[0]
             $id = "Python.Python.$major"
-            if (-not $matchedIds.ContainsKey($id)) { Add-PackageMatch $name $id }
+            if (-not $matchedIds.ContainsKey($id)) { Add-PackageMatch $cleanName $id }
             continue
         }
 
@@ -250,7 +251,7 @@ try {
         # Try winget search for remaining apps
         try {
             $searchResult = winget search --name "`"$cleanName`"" --exact --accept-source-agreements 2>$null
-            if ($searchResult -match $cleanName) {
+            if ($searchResult -match [regex]::Escape($cleanName)) {
                 # Parse the winget ID from search output
                 $lines = $searchResult -split "`n" | Where-Object { $_ -match '\S' }
                 if ($lines.Count -ge 3) {

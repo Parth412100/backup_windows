@@ -1,5 +1,5 @@
 ﻿MANUAL INSTALL CHECKLIST
-Generated: 2026-06-04 14:06:45
+Generated: 2026-06-04 14:08:37
 Computer: PARTYBOY
 
 These programs could not be automatically matched to a winget ID.
@@ -11,6 +11,7 @@ Install them manually after restore.
 - Drive
 - Freedom Fighters
 - Genshin Impact
+- Google
 - Google Partner Setup
 - Google Play services
 - Google Play Services for AR

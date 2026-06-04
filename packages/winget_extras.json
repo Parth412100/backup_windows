@@ -1,5 +1,5 @@
 ﻿{
-    "CreationDate":  "2026-06-04T08:36:45.7914082Z",
+    "CreationDate":  "2026-06-04T08:38:37.1980462Z",
     "Sources":  [
                     {
                         "SourceDetails":  {
@@ -17,9 +17,6 @@
                                          },
                                          {
                                              "PackageIdentifier":  "qBittorrent.qBittorrent"
-                                         },
-                                         {
-                                             "PackageIdentifier":  "Google.Chrome"
                                          }
                                      ]
                     }
