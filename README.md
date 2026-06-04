@@ -4,6 +4,16 @@ One-command backup of your Windows config, apps, and settings. Restore everythin
 
 ## Quick Start
 
+### Fresh install — one-liner
+```powershell
+git clone https://github.com/Parth412100/backup_windows.git; cd backup_windows; .\setup.ps1 -Restore
+```
+
+### Backup current machine
+```powershell
+.\setup.ps1 -Backup
+```
+
 ### Backup your current machine
 ```powershell
 .\setup.ps1 -Backup
