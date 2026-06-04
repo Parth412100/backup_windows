@@ -1,7 +1,8 @@
 param(
     [string]$BackupDir = "$PSScriptRoot",
     [switch]$DryRun,
-    [switch]$Silent
+    [switch]$Silent,
+    [switch]$SkipAniCli
 )
 
 $log = "$BackupDir\restore.log"
@@ -25,7 +26,8 @@ function Ensure-Admin {
                 "-File `"$($MyInvocation.MyCommand.Path)`"",
                 "-BackupDir `"$BackupDir`"",
                 $(if ($Silent) { "-Silent" }),
-                $(if ($DryRun) { "-DryRun" })
+                $(if ($DryRun) { "-DryRun" }),
+                $(if ($SkipAniCli) { "-SkipAniCli" })
             ) -Wait
             exit
         }
@@ -49,20 +51,15 @@ if ($DryRun) { Write-Log "  *** DRY RUN - no changes applied ***" }
 # ══════════════════════════════════════════════════════════════════
 # STEP 0: INSTALL PACKAGE MANAGERS
 # ══════════════════════════════════════════════════════════════════
-Write-Log "`n[0/8] Ensuring package managers are installed..."
+Write-Log "`n[0/9] Ensuring package managers are installed..."
 
 # winget comes with Windows 10 1809+ / Windows 11
 $wingetAvailable = $null -ne (Get-Command winget -ErrorAction SilentlyContinue)
 if (-not $wingetAvailable -and -not $DryRun) {
-    Write-Log "  winget not found. Installing App Installer from store..."
-    try {
-        $url = "https://www.nuget.org/api/v2/package/Microsoft.UI.Xaml/2.8.6"
-        $tmp = "$env:TEMP\winrt.zip"
-        # Try installing via Microsoft Store or download
-        Start-Process "ms-windows-store://pdp/?productid=9NBLGGH4NNS1" -Wait
-        Write-Log "  Please install App Installer from the store that opened."
-        Write-Log "  After install, re-run this script."
-    } catch { Write-Log "  Could not install winget automatically." }
+    Write-Log "  winget not found. Please install App Installer from:"
+    Write-Log "  https://apps.microsoft.com/detail/9NBLGGH4NNS1"
+    Write-Log "  or run: winget install Microsoft.AppInstaller"
+    Write-Log "  Then re-run this script."
 }
 
 if ($DryRun) { Write-Log "  [DRY RUN] Would install: winget, chocolatey (optional)" }
@@ -70,7 +67,7 @@ if ($DryRun) { Write-Log "  [DRY RUN] Would install: winget, chocolatey (optiona
 # ══════════════════════════════════════════════════════════════════
 # STEP 1: RESTORE CONFIG FILES
 # ══════════════════════════════════════════════════════════════════
-Write-Log "`n[1/8] Restoring config files..."
+Write-Log "`n[1/9] Restoring config files..."
 
 # PowerShell profile
 $p = "$BackupDir\configs\powershell\profile.ps1"
@@ -83,15 +80,18 @@ if (Test-File $p) {
 }
 
 # Windows Terminal
-$p = "$BackupDir\configs\terminal\settings.json"
-if (Test-File $p) {
-    $dirs = Get-ChildItem "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_*\LocalState" -ErrorAction SilentlyContinue
-    if (-not $dirs -and $DryRun) {
-        Write-Log "  [DRY RUN] Would restore terminal settings after Terminal is installed"
-    }
-    foreach ($d in $dirs) {
-        if (-not $DryRun) { Copy-Item $p -Dest "$($d.FullName)\settings.json" -Force; Write-Log "  Terminal settings restored" }
-        else { Write-Log "  [DRY RUN] Copy $p -> $($d.FullName)" }
+$termPairs = @(
+    @{Src="settings.json"; Pattern="Microsoft.WindowsTerminal_*"}
+    @{Src="settings_preview.json"; Pattern="Microsoft.WindowsTerminalPreview_*"}
+)
+foreach ($tp in $termPairs) {
+    $p = "$BackupDir\configs\terminal\$($tp.Src)"
+    if (Test-File $p) {
+        $dirs = Get-ChildItem "$env:LOCALAPPDATA\Packages\$($tp.Pattern)\LocalState" -ErrorAction SilentlyContinue
+        foreach ($d in $dirs) {
+            if (-not $DryRun) { Copy-Item $p -Dest "$($d.FullName)\settings.json" -Force; Write-Log "  Terminal $($tp.Src) restored" }
+            else { Write-Log "  [DRY RUN] Copy $p -> $($d.FullName)" }
+        }
     }
 }
 
@@ -140,7 +140,7 @@ foreach ($f in @("$BackupDir\configs\ssh\config", "$BackupDir\configs\ssh\known_
 # ══════════════════════════════════════════════════════════════════
 # STEP 2: RESTORE REGISTRY SETTINGS (LOOK & FEEL)
 # ══════════════════════════════════════════════════════════════════
-Write-Log "`n[2/8] Restoring registry settings..."
+Write-Log "`n[2/9] Restoring registry settings..."
 
 $regFiles = Get-ChildItem "$BackupDir\registry\*.reg" -ErrorAction SilentlyContinue
 if ($regFiles) {
@@ -186,13 +186,13 @@ if (Test-File $acc) {
 }
 
 # Taskbar settings
-$taskbarFile = "$BackupDir\configs\taskbar_settings.xml"
+$taskbarFile = "$BackupDir\configs\taskbar_settings.json"
 if (Test-Path $taskbarFile) {
     if (-not $DryRun) {
-        $tb = Import-CliXml $taskbarFile
+        $tb = Get-Content $taskbarFile | ConvertFrom-Json
         $ePath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-        foreach ($k in $tb.Keys) {
-            Set-ItemProperty -Path $ePath -Name $k -Value $tb[$k] -ErrorAction SilentlyContinue
+        $tb.PSObject.Properties | Where-Object { $_.Name -notmatch '^PS[A-Z]' } | ForEach-Object {
+            Set-ItemProperty -Path $ePath -Name $_.Name -Value $_.Value -ErrorAction SilentlyContinue
         }
         Write-Log "  Taskbar settings restored"
     } else { Write-Log "  [DRY RUN] Restore taskbar settings" }
@@ -214,7 +214,7 @@ if (Test-Path $wmFile) {
 # ══════════════════════════════════════════════════════════════════
 # STEP 3: INSTALL APPS (winget)
 # ══════════════════════════════════════════════════════════════════
-Write-Log "`n[3/8] Installing applications from backup..."
+Write-Log "`n[3/9] Installing applications from backup..."
 
 $wf = "$BackupDir\packages\winget.json"
 if (Test-File $wf) {
@@ -229,35 +229,24 @@ if (Test-File $wf) {
     Write-Log "  No winget package list found"
 
     # Offer to install common apps from a curated list if no backup exists
-    if (-not $DryRun) {
+    if (-not $DryRun -and -not $Silent) {
         Write-Host ""
         Write-Host "  No app backup found. Install common apps? (y/n) " -NoNewline
         $resp = Read-Host
         if ($resp -eq 'y') {
             $commonApps = @(
-                "Microsoft.DevHome",
-                "Microsoft.WindowsTerminal",
-                "Microsoft.PowerToys",
-                "Microsoft.VisualStudioCode",
-                "Git.Git",
-                "7zip.7zip",
-                "Google.Chrome",
-                "Mozilla.Firefox",
-                "Spotify.Spotify",
-                "VideoLAN.VLC",
-                "OBSProject.OBSStudio",
-                "Discord.Discord",
-                "Slack.Slack",
-                "Notepad++.Notepad++",
-                "GIMP.GIMP",
-                "ShareX.ShareX",
-                "UnityTechnologies.UnityHub",
-                "WinDirStat.WinDirStat",
-                "Greenshot.Greenshot",
-                "Figma.Figma"
+                "Microsoft.WindowsTerminal"
+                "Microsoft.PowerToys"
+                "Microsoft.VisualStudioCode"
+                "Git.Git"
+                "7zip.7zip"
+                "Google.Chrome"
+                "VideoLAN.VLC"
+                "Notepad++.Notepad++"
+                "Discord.Discord"
             )
             foreach ($app in $commonApps) {
-                Write-Host "     Installing: $app"
+                Write-Host "     $app..."
                 winget install --id $app --accept-source-agreements --accept-package-agreements 2>$null
             }
             Write-Log "  Common apps installed"
@@ -268,7 +257,7 @@ if (Test-File $wf) {
 # ══════════════════════════════════════════════════════════════════
 # STEP 4: VS CODE EXTENSIONS
 # ══════════════════════════════════════════════════════════════════
-Write-Log "`n[4/8] Restoring VS Code extensions..."
+Write-Log "`n[4/9] Restoring VS Code extensions..."
 
 $extFile = "$BackupDir\configs\vscode\extensions.txt"
 if (Test-File $extFile -and (Get-Command code -ErrorAction SilentlyContinue)) {
@@ -289,12 +278,14 @@ if (Test-File $extFile -and (Get-Command code -ErrorAction SilentlyContinue)) {
 # ══════════════════════════════════════════════════════════════════
 # STEP 5: POWERSHELL MODULES
 # ══════════════════════════════════════════════════════════════════
-Write-Log "`n[5/8] Restoring PowerShell modules..."
+Write-Log "`n[5/9] Restoring PowerShell modules..."
 
 $modFile = "$BackupDir\configs\powershell\modules.csv"
 if (Test-Path $modFile) {
     $mods = Import-Csv $modFile
     if (-not $DryRun) {
+        # Ensure NuGet provider is available
+        $null = Install-PackageProvider -Name NuGet -Force -ErrorAction SilentlyContinue
         foreach ($m in $mods) {
             Write-Host "     $($m.Name) $($m.Version)..."
             Install-Module -Name $m.Name -RequiredVersion $m.Version -Force -SkipPublisherCheck -ErrorAction SilentlyContinue
@@ -308,7 +299,7 @@ if (Test-Path $modFile) {
 # ══════════════════════════════════════════════════════════════════
 # STEP 6: ENVIRONMENT VARIABLES
 # ══════════════════════════════════════════════════════════════════
-Write-Log "`n[6/8] Restoring environment variables..."
+Write-Log "`n[6/9] Restoring environment variables..."
 
 $envFile = "$BackupDir\env\user_env_vars.csv"
 if (Test-Path $envFile) {
@@ -338,7 +329,7 @@ if (Test-Path $upf) {
 # ══════════════════════════════════════════════════════════════════
 # STEP 7: RESTORE WALLPAPER
 # ══════════════════════════════════════════════════════════════════
-Write-Log "`n[7/8] Restoring wallpaper..."
+Write-Log "`n[7/9] Restoring wallpaper..."
 
 $wallpaperFiles = Get-ChildItem "$BackupDir\configs\wallpaper.*" -ErrorAction SilentlyContinue
 if ($wallpaperFiles) {
@@ -367,7 +358,7 @@ public class Wallpaper {
 # ══════════════════════════════════════════════════════════════════
 # STEP 8: ADDITIONAL MISC RESTORE
 # ══════════════════════════════════════════════════════════════════
-Write-Log "`n[8/8] Additional restore steps..."
+Write-Log "`n[8/9] Additional restore steps..."
 
 # Hosts file
 $hostsBackup = "$BackupDir\configs\hosts.backup"
@@ -409,10 +400,115 @@ if (Test-Path $defFile) {
     $exclusions = Import-Csv $defFile
     if (-not $DryRun -and $exclusions) {
         foreach ($ex in $exclusions) {
-            if ($ex.ExclusionPath) { Add-MpPreference -ExclusionPath $ex.ExclusionPath -ErrorAction SilentlyContinue }
+            $val = $ex.Value
+            if ($val) {
+                switch ($ex.Type) {
+                    'Path'      { Add-MpPreference -ExclusionPath $val -ErrorAction SilentlyContinue }
+                    'Extension' { Add-MpPreference -ExclusionExtension $val -ErrorAction SilentlyContinue }
+                    'Process'   { Add-MpPreference -ExclusionProcess $val -ErrorAction SilentlyContinue }
+                }
+            }
         }
         Write-Log "  Defender exclusions restored"
     } else { Write-Log "  [DRY RUN] Restore defender exclusions" }
+}
+
+# ══════════════════════════════════════════════════════════════════
+# STEP 9: SET UP ANI-CLI (optional, skip with -SkipAniCli)
+# ══════════════════════════════════════════════════════════════════
+if (-not $SkipAniCli) {
+Write-Log "`n[9/9] Setting up ani-cli..."
+
+if (-not $DryRun) {
+    # Install scoop if not present
+    if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
+        Write-Host "  Installing Scoop..."
+        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+        Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+        Write-Log "  Scoop installed"
+    } else {
+        Write-Log "  Scoop already installed"
+    }
+
+    $env:Path = [Environment]::GetEnvironmentVariable("Path","User") + ";" + [Environment]::GetEnvironmentVariable("Path","Machine")
+
+    # Add extras bucket if missing
+    scoop bucket add extras 2>$null
+    Write-Log "  Scoop extras bucket ready"
+
+    # Install dependencies
+    Write-Host "  Installing fzf, ffmpeg, aria2, yt-dlp..."
+    scoop install fzf ffmpeg aria2 yt-dlp 2>$null
+    Write-Log "  ani-cli dependencies installed (fzf, ffmpeg, aria2, yt-dlp)"
+
+    # Install mpv via winget if not found
+    if (-not (Get-Command mpv -ErrorAction SilentlyContinue)) {
+        Write-Host "  Installing mpv..."
+        winget install mpv --accept-source-agreements 2>$null
+        Write-Log "  mpv installed via winget"
+    }
+
+    # Detect Git Bash location
+    $gitBash = if (Test-Path "C:\Program Files\Git\usr\bin\bash.exe") {
+        "C:\Program Files\Git\usr\bin\bash.exe"
+    } elseif (Test-Path "C:\Program Files\Git\bin\bash.exe") {
+        "C:\Program Files\Git\bin\bash.exe"
+    } else {
+        $null
+    }
+
+    if (-not $gitBash) {
+        Write-Log "  Git Bash not found, installing Git for Windows..."
+        winget install Git.Git --accept-source-agreements --accept-package-agreements 2>$null
+        $gitBash = "C:\Program Files\Git\usr\bin\bash.exe"
+    }
+
+    # Clone ani-cli repo
+    $aniCliDir = "$env:USERPROFILE\.ani-cli"
+    if (-not (Test-Path "$aniCliDir\ani-cli")) {
+        New-Item -ItemType Directory -Path $aniCliDir -Force | Out-Null
+        git clone https://github.com/pystardust/ani-cli.git $aniCliDir 2>$null
+        Write-Log "  ani-cli cloned to $aniCliDir"
+    } else {
+        Write-Log "  ani-cli already cloned"
+    }
+
+    # Create fake-bin dir with head-based fzf shim for non-interactive use
+    $fakeBin = "$aniCliDir\fake-bin"
+    New-Item -ItemType Directory -Path $fakeBin -Force | Out-Null
+    @'
+#!/usr/bin/env bash
+head -n 1
+'@ | Out-File "$fakeBin\fzf" -Encoding ascii -Force
+    Write-Log "  Fake fzf shim created"
+
+    # Create ani-cli launcher script
+    $msysDir = $aniCliDir -replace '^([A-Z]):', '/$1' -replace '\\', '/'
+    $msysScoop = $env:USERPROFILE -replace '^([A-Z]):', '/$1' -replace '\\', '/'
+    @"
+#!/usr/bin/env bash
+export PATH="$fakeBin:`$PATH"
+export PATH="`$PATH:$msysScoop/scoop/shims"
+ANI_CLI_DOWNLOAD_DIR="`${1:-.}" $msysDir/ani-cli "`${@:2}"
+"@ | Out-File "$aniCliDir\run-ani.sh" -Encoding ascii -Force
+    Write-Log "  ani-cli launcher created at $aniCliDir\run-ani.sh"
+
+    # Create cmd wrapper for easy CLI access
+    $wrapper = "$env:USERPROFILE\scoop\shims\ani-cli.cmd"
+    $msysPath = $aniCliDir -replace '\\', '/'
+    $drive = ($aniCliDir -replace '^([A-Z]):.*', '/$1').ToLower()
+    $rest = $aniCliDir -replace '^[A-Z]:', '' -replace '\\', '/'
+    $bashPath = "$drive$rest"
+@"
+@echo off
+"$gitBash" -l -c "$bashPath/ani-cli" %*
+"@ | Out-File $wrapper -Encoding ascii -Force
+    Write-Log "  ani-cli cmd wrapper created"
+
+    Write-Log "  ani-cli setup complete!"
+} else {
+    Write-Log "  [DRY RUN] Would install: scoop, fzf, ffmpeg, aria2, yt-dlp, mpv, ani-cli"
+}
 }
 
 # ══════════════════════════════════════════════════════════════════

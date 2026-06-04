@@ -30,9 +30,10 @@ Write-Log "=== WINDOWS CONFIG BACKUP ==="
 Write-Log "Backup to: $BackupDir"
 
 # ─── 1. SYSTEM INFO ───────────────────────────────────────────────
+$osInfo = Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture
 @"
 Hostname: $(hostname)
-OS: $(Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture | Out-String).Trim()
+OS: $($osInfo.Caption) $($osInfo.Version) $($osInfo.OSArchitecture)
 Logged-in User: $env:USERNAME@$env:USERDOMAIN
 "@ | Out-File "$BackupDir\system_info.txt" -Encoding utf8
 
@@ -43,8 +44,8 @@ if (Test-Path $PROFILE.CurrentUserCurrentHost) {
 if (Test-Path $PROFILE.AllUsersCurrentHost) {
     Copy-Item -Path $PROFILE.AllUsersCurrentHost -Destination "$BackupDir\configs\powershell\profile_all_users.ps1" -Force
 }
-Get-InstalledModule | Select-Object Name, Version | Export-Csv "$BackupDir\configs\powershell\modules.csv" -NoTypeInformation
-Get-PSRepository | Select-Object Name, SourceLocation, InstallationPolicy | Export-Csv "$BackupDir\configs\powershell\repositories.csv" -NoTypeInformation
+try { Get-InstalledModule | Select-Object Name, Version | Export-Csv "$BackupDir\configs\powershell\modules.csv" -NoTypeInformation } catch {}
+try { Get-PSRepository | Select-Object Name, SourceLocation, InstallationPolicy | Export-Csv "$BackupDir\configs\powershell\repositories.csv" -NoTypeInformation } catch {}
 
 # ─── 3. WINDOWS TERMINAL ─────────────────────────────────────────
 $termPath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_*\LocalState\settings.json"
@@ -76,15 +77,11 @@ if (Test-Path "$sshDir\known_hosts") { Copy-Item "$sshDir\known_hosts" -Dest "$B
 $regHives = @(
     "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
     "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband"
-    "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects2"
     "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent"
-    "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People"
-    "HKCU\Software\Microsoft\Windows\CurrentVersion\FileExplorer"
     "HKCU\Control Panel\Desktop"
     "HKCU\Control Panel\Colors"
     "HKCU\Control Panel\Desktop\WindowMetrics"
     "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes"
-    "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
     "HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager"
     "HKCU\Software\Microsoft\Windows\CurrentVersion\Search"
     "HKCU\Software\Microsoft\Windows\CurrentVersion\Start"
@@ -108,7 +105,7 @@ foreach ($key in $regHives) {
 }
 
 # ─── 8. ENVIRONMENT VARIABLES ────────────────────────────────────
-Get-ChildItem Env: | Where-Object { $_.Name -notmatch '^(TEMP|TMP|Path)$' } |
+Get-ChildItem Env: | Where-Object { $_.Name -notmatch '^(TEMP|TMP|Path|VSCODE_GIT_|OPENCODE_|CHROME_CRASHPAD_|SESSIONNAME)$' } |
     Select-Object Name, Value | Export-Csv "$BackupDir\env\user_env_vars.csv" -NoTypeInformation
 
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
@@ -120,7 +117,7 @@ $sysPath -split ';'  | Where-Object { $_ } | Out-File "$BackupDir\env\system_pat
 Write-Log "Exporting package lists..."
 
 # winget
-try { winget export -o "$BackupDir\packages\winget.json" --accept-source-agreements 2>$null } catch {}
+try { winget export -o "$BackupDir\packages\winget.json" --accept-source-agreements --accept-package-agreements 2>$null } catch {}
 # chocolatey
 try { if (Get-Command choco -ErrorAction SilentlyContinue) { choco list -lo -r | Out-File "$BackupDir\packages\chocolatey.txt" -Encoding utf8 } } catch {}
 # scoop
@@ -148,7 +145,7 @@ try { Get-WindowsOptionalFeature -Online | Where-Object State -eq Enabled | Sele
 $startupItem = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -ErrorAction SilentlyContinue
 if ($startupItem -and $startupItem.PSObject.Properties) {
     $startupItem.PSObject.Properties |
-        Where-Object { $_.MemberType -eq 'NoteProperty' } |
+        Where-Object { $_.MemberType -eq 'NoteProperty' -and $_.Name -notmatch '^PS[A-Z]' } |
         Select-Object @{N='Name';E={$_.Name}}, @{N='Command';E={$_.Value}} |
         Export-Csv "$BackupDir\configs\startup.csv" -NoTypeInformation
 }
@@ -189,7 +186,7 @@ ColorPrevalence=$(try {(Get-ItemProperty "$p" -Name ColorPrevalence).ColorPreval
     $wmData = Get-ItemProperty "HKCU:\Control Panel\Desktop\WindowMetrics" -ErrorAction SilentlyContinue
     if ($wmData -and $wmData.PSObject.Properties) {
         $wmData.PSObject.Properties |
-            Where-Object { $_.MemberType -eq 'NoteProperty' } |
+            Where-Object { $_.MemberType -eq 'NoteProperty' -and $_.Name -notmatch '^PS[A-Z]' } |
             Select-Object @{N='Name';E={$_.Name}}, @{N='Value';E={$_.Value}} |
             Export-Csv "$BackupDir\configs\window_metrics.csv" -NoTypeInformation
     }
@@ -223,7 +220,7 @@ try {
     $fontData = Get-ItemProperty "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts" -ErrorAction SilentlyContinue
     if ($fontData -and $fontData.PSObject.Properties) {
         $fontData.PSObject.Properties |
-            Where-Object { $_.MemberType -eq 'NoteProperty' } |
+            Where-Object { $_.MemberType -eq 'NoteProperty' -and $_.Name -notmatch '^PS[A-Z]' } |
             Select-Object @{N='FontName';E={$_.Name}}, @{N='FontFile';E={$_.Value}} |
             Export-Csv "$BackupDir\configs\fonts.csv" -NoTypeInformation
     }
@@ -231,8 +228,14 @@ try {
 
 # ─── 16. DEFENDER EXCLUSIONS ─────────────────────────────────────
 try {
-    Get-MpPreference | Select-Object ExclusionPath, ExclusionExtension, ExclusionProcess |
-        Export-Csv "$BackupDir\configs\defender_exclusions.csv" -NoTypeInformation
+    $mpPref = Get-MpPreference -ErrorAction SilentlyContinue
+    if ($mpPref) {
+        $exclusions = @()
+        foreach ($path in $mpPref.ExclusionPath) { $exclusions += [PSCustomObject]@{Type='Path';Value=$path} }
+        foreach ($ext in $mpPref.ExclusionExtension) { $exclusions += [PSCustomObject]@{Type='Extension';Value=$ext} }
+        foreach ($proc in $mpPref.ExclusionProcess) { $exclusions += [PSCustomObject]@{Type='Process';Value=$proc} }
+        $exclusions | Export-Csv "$BackupDir\configs\defender_exclusions.csv" -NoTypeInformation
+    }
 } catch {}
 
 # ─── 17. HOSTS FILE ──────────────────────────────────────────────
@@ -248,7 +251,7 @@ try {
         $val = (Get-ItemProperty "$e" -Name $_ -ErrorAction SilentlyContinue).$_
         if ($null -ne $val) { $taskbarSettings[$_] = $val }
     }
-    $taskbarSettings | Export-CliXml "$BackupDir\configs\taskbar_settings.xml"
+    $taskbarSettings | ConvertTo-Json | Out-File "$BackupDir\configs\taskbar_settings.json" -Encoding utf8
 } catch {}
 
 # ─── SUMMARY ──────────────────────────────────────────────────────
