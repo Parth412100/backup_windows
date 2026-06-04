@@ -1,4 +1,5 @@
-﻿C:\Python314\Scripts\
+﻿C:\Program Files\coreutils\bin
+C:\Python314\Scripts\
 C:\Python314\
 C:\E\oracle\dbhomeXE\bin
 D:\oracle\dbhomeXE\bin

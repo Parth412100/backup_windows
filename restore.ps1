@@ -14,6 +14,20 @@ function Write-Log {
     Add-Content -Path $log -Value $line
 }
 
+function Invoke-WithTimeout {
+    param([scriptblock]$ScriptBlock, [int]$TimeoutSeconds, [string]$Label = "Command")
+    $job = Start-Job -ScriptBlock $ScriptBlock
+    $job | Wait-Job -Timeout $TimeoutSeconds | Out-Null
+    if ($job.State -eq 'Running') {
+        Stop-Job $job
+        Write-Log "  ⚠ $Label timed out after ${TimeoutSeconds}s, skipping"
+        return $null
+    }
+    $output = Receive-Job -Job $job -ErrorAction SilentlyContinue
+    Remove-Job $job -ErrorAction SilentlyContinue
+    $output
+}
+
 function Ensure-Admin {
     $id = [Security.Principal.WindowsIdentity]::GetCurrent()
     $p  = [Security.Principal.WindowsPrincipal]$id
@@ -221,10 +235,12 @@ $wfExtra = "$BackupDir\packages\winget_extras.json"
 if (Test-File $wf) {
     if (-not $DryRun) {
         Write-Host "  Installing apps via winget (this may take a while)..."
-        winget import -i "$wf" --accept-source-agreements --accept-package-agreements 2>&1 | ForEach-Object { Write-Host "     $_" }
+        $mainResult = Invoke-WithTimeout { winget import -i "$wf" --accept-source-agreements --accept-package-agreements 2>&1 } 1800 "winget import (main)"
+        if ($null -ne $mainResult) { $mainResult | ForEach-Object { Write-Host "     $_" } }
         # Also install any extra matched packages
         if (Test-Path $wfExtra) {
-            winget import -i "$wfExtra" --accept-source-agreements --accept-package-agreements 2>&1 | ForEach-Object { Write-Host "     $_" }
+            $extraResult = Invoke-WithTimeout { winget import -i "$wfExtra" --accept-source-agreements --accept-package-agreements 2>&1 } 600 "winget import (extras)"
+            if ($null -ne $extraResult) { $extraResult | ForEach-Object { Write-Host "     $_" } }
         }
         Write-Log "  Winget packages installed"
     } else {
@@ -253,7 +269,7 @@ if (Test-File $wf) {
             )
             foreach ($app in $commonApps) {
                 Write-Host "     $app..."
-                winget install --id $app --accept-source-agreements --accept-package-agreements 2>$null
+                Invoke-WithTimeout { winget install --id $app --accept-source-agreements --accept-package-agreements 2>$null } 300 "winget install $app" | Out-Null
             }
             Write-Log "  Common apps installed"
         }
@@ -272,7 +288,7 @@ if (Test-File $extFile -and (Get-Command code -ErrorAction SilentlyContinue)) {
         if (-not $DryRun) {
             foreach ($ext in $exts) {
                 Write-Host "     $ext..."
-                code --install-extension $ext --force 2>$null
+                Invoke-WithTimeout { code --install-extension $ext --force 2>$null } 60 "VS Code extension: $ext" | Out-Null
             }
             Write-Log "  $($exts.Count) VS Code extensions installed"
         } else { Write-Log "  [DRY RUN] Would install $($exts.Count) extensions" }
@@ -291,10 +307,10 @@ if (Test-Path $modFile) {
     $mods = Import-Csv $modFile
     if (-not $DryRun) {
         # Ensure NuGet provider is available
-        $null = Install-PackageProvider -Name NuGet -Force -ErrorAction SilentlyContinue
+        Invoke-WithTimeout { Install-PackageProvider -Name NuGet -Force -ErrorAction SilentlyContinue } 60 "NuGet provider" | Out-Null
         foreach ($m in $mods) {
             Write-Host "     $($m.Name) $($m.Version)..."
-            Install-Module -Name $m.Name -RequiredVersion $m.Version -Force -SkipPublisherCheck -ErrorAction SilentlyContinue
+            Invoke-WithTimeout { Install-Module -Name $m.Name -RequiredVersion $m.Version -Force -SkipPublisherCheck -ErrorAction SilentlyContinue } 120 "Install-Module $($m.Name)" | Out-Null
         }
         Write-Log "  PowerShell modules restored"
     } else { Write-Log "  [DRY RUN] Would install $($mods.Count) modules" }
@@ -430,8 +446,8 @@ if (-not $DryRun) {
     if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
         Write-Host "  Installing Scoop..."
         Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-        Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
-        Write-Log "  Scoop installed"
+        $scoopResult = Invoke-WithTimeout { Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression } 60 "scoop install"
+        if ($null -ne $scoopResult) { Write-Log "  Scoop installed" } else { Write-Log "  Scoop install timed out, skipping" }
     } else {
         Write-Log "  Scoop already installed"
     }
@@ -439,18 +455,18 @@ if (-not $DryRun) {
     $env:Path = [Environment]::GetEnvironmentVariable("Path","User") + ";" + [Environment]::GetEnvironmentVariable("Path","Machine")
 
     # Add extras bucket if missing
-    scoop bucket add extras 2>$null
+    Invoke-WithTimeout { scoop bucket add extras 2>$null } 30 "scoop bucket add extras" | Out-Null
     Write-Log "  Scoop extras bucket ready"
 
     # Install dependencies
     Write-Host "  Installing fzf, ffmpeg, aria2, yt-dlp..."
-    scoop install fzf ffmpeg aria2 yt-dlp 2>$null
+    Invoke-WithTimeout { scoop install fzf ffmpeg aria2 yt-dlp 2>$null } 120 "scoop install deps" | Out-Null
     Write-Log "  ani-cli dependencies installed (fzf, ffmpeg, aria2, yt-dlp)"
 
     # Install mpv via winget if not found
     if (-not (Get-Command mpv -ErrorAction SilentlyContinue)) {
         Write-Host "  Installing mpv..."
-        winget install mpv --accept-source-agreements 2>$null
+        Invoke-WithTimeout { winget install mpv --accept-source-agreements 2>$null } 300 "winget install mpv" | Out-Null
         Write-Log "  mpv installed via winget"
     }
 
@@ -465,7 +481,7 @@ if (-not $DryRun) {
 
     if (-not $gitBash) {
         Write-Log "  Git Bash not found, installing Git for Windows..."
-        winget install Git.Git --accept-source-agreements --accept-package-agreements 2>$null
+        Invoke-WithTimeout { winget install Git.Git --accept-source-agreements --accept-package-agreements 2>$null } 300 "winget install Git" | Out-Null
         $gitBash = "C:\Program Files\Git\usr\bin\bash.exe"
     }
 
@@ -473,8 +489,8 @@ if (-not $DryRun) {
     $aniCliDir = "$env:USERPROFILE\.ani-cli"
     if (-not (Test-Path "$aniCliDir\ani-cli")) {
         New-Item -ItemType Directory -Path $aniCliDir -Force | Out-Null
-        git clone https://github.com/pystardust/ani-cli.git $aniCliDir 2>$null
-        Write-Log "  ani-cli cloned to $aniCliDir"
+        $cloneResult = Invoke-WithTimeout { git clone https://github.com/pystardust/ani-cli.git $aniCliDir 2>$null } 120 "git clone ani-cli"
+        if ($null -ne $cloneResult) { Write-Log "  ani-cli cloned to $aniCliDir" } else { Write-Log "  ani-cli clone timed out, skipping" }
     } else {
         Write-Log "  ani-cli already cloned"
     }

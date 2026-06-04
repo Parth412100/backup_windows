@@ -13,6 +13,20 @@ function Write-Log {
     Add-Content -Path $log -Value $line
 }
 
+function Invoke-WithTimeout {
+    param([scriptblock]$ScriptBlock, [int]$TimeoutSeconds, [string]$Label = "Command")
+    $job = Start-Job -ScriptBlock $ScriptBlock
+    $job | Wait-Job -Timeout $TimeoutSeconds | Out-Null
+    if ($job.State -eq 'Running') {
+        Stop-Job $job
+        Write-Log "  ⚠ $Label timed out after ${TimeoutSeconds}s, skipping"
+        return $null
+    }
+    $output = Receive-Job -Job $job -ErrorAction SilentlyContinue
+    Remove-Job $job -ErrorAction SilentlyContinue
+    $output
+}
+
 @"
 Windows Config Backup - Manifest
 Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
@@ -62,7 +76,7 @@ $vsc = "$env:APPDATA\Code\User"
 if (Test-Path "$vsc\settings.json") { Copy-Item "$vsc\settings.json" -Dest "$BackupDir\configs\vscode\settings.json" -Force }
 if (Test-Path "$vsc\keybindings.json") { Copy-Item "$vsc\keybindings.json" -Dest "$BackupDir\configs\vscode\keybindings.json" -Force }
 if (Test-Path "$vsc\snippets") { Copy-Item "$vsc\snippets\*" -Dest "$BackupDir\configs\vscode\snippets\" -Recurse -Force }
-try { code --list-extensions 2>$null | Out-File "$BackupDir\configs\vscode\extensions.txt" -Encoding utf8 } catch {}
+try { $extOutput = Invoke-WithTimeout { code --list-extensions 2>$null } 30 "VS Code extensions"; if ($null -ne $extOutput) { $extOutput | Out-File "$BackupDir\configs\vscode\extensions.txt" -Encoding utf8 } } catch {}
 
 # ─── 5. GIT ───────────────────────────────────────────────────────
 if (Test-Path "$env:USERPROFILE\.gitconfig") { Copy-Item "$env:USERPROFILE\.gitconfig" -Dest "$BackupDir\configs\git\.gitconfig" -Force }
@@ -99,7 +113,7 @@ foreach ($key in $regHives) {
         $testKey = $key -replace '^HKCU\\', 'HKCU:\' -replace '^HKLM\\', 'HKLM:\'
         if (Test-Path $testKey) {
             $file = "$BackupDir\registry\$($key.Replace('\','_').Replace(':','')).reg"
-            reg export "`"$key`"" "$file" /y 2>$null
+            Invoke-WithTimeout { reg export "`"$key`"" "$file" /y 2>$null } 15 "reg export" | Out-Null
         }
     } catch {}
 }
@@ -117,11 +131,11 @@ $sysPath -split ';'  | Where-Object { $_ } | Out-File "$BackupDir\env\system_pat
 Write-Log "Exporting package lists..."
 
 # winget
-try { winget export -o "$BackupDir\packages\winget.json" --accept-source-agreements 2>$null } catch {}
+Invoke-WithTimeout { winget export -o "$BackupDir\packages\winget.json" --accept-source-agreements 2>$null } 120 "winget export" | Out-Null
 # chocolatey
-try { if (Get-Command choco -ErrorAction SilentlyContinue) { choco list -lo -r | Out-File "$BackupDir\packages\chocolatey.txt" -Encoding utf8 } } catch {}
+try { if (Get-Command choco -ErrorAction SilentlyContinue) { Invoke-WithTimeout { choco list -lo -r } 60 "choco list" | Out-File "$BackupDir\packages\chocolatey.txt" -Encoding utf8 } } catch {}
 # scoop
-try { if (Get-Command scoop -ErrorAction SilentlyContinue) { scoop export | Out-File "$BackupDir\packages\scoop.json" -Encoding utf8 } } catch {}
+try { if (Get-Command scoop -ErrorAction SilentlyContinue) { Invoke-WithTimeout { scoop export } 60 "scoop export" | Out-File "$BackupDir\packages\scoop.json" -Encoding utf8 } } catch {}
 
 # Installed programs (from registry uninstall keys)
 $progs = @()
@@ -248,10 +262,10 @@ try {
         }
         if ($found) { continue }
 
-        # Try winget search for remaining apps
+        # Try winget search for remaining apps (with 30s timeout)
         try {
-            $searchResult = winget search --name "`"$cleanName`"" --exact --accept-source-agreements 2>$null
-            if ($searchResult -match [regex]::Escape($cleanName)) {
+            $searchResult = Invoke-WithTimeout { winget search --name "`"$cleanName`"" --exact --accept-source-agreements 2>$null } 30 "winget search: $cleanName"
+            if ($null -ne $searchResult -and $searchResult -match [regex]::Escape($cleanName)) {
                 # Parse the winget ID from search output
                 $lines = $searchResult -split "`n" | Where-Object { $_ -match '\S' }
                 if ($lines.Count -ge 3) {
@@ -327,8 +341,8 @@ try {
 
 # ─── 12. POWER SCHEME ────────────────────────────────────────────
 try {
-    powercfg /query > "$BackupDir\configs\power_settings.txt" 2>$null
-    powercfg /getactivescheme | Out-File "$BackupDir\configs\active_power_scheme.txt" -Encoding utf8
+    Invoke-WithTimeout { powercfg /query 2>$null } 15 "powercfg /query" | Out-File "$BackupDir\configs\power_settings.txt" -Encoding utf8
+    Invoke-WithTimeout { powercfg /getactivescheme 2>$null } 10 "powercfg /getactivescheme" | Out-File "$BackupDir\configs\active_power_scheme.txt" -Encoding utf8
 } catch {}
 
 # ─── 13. THEME / COLOR / DARK MODE ──────────────────────────────

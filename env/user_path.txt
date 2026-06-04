@@ -16,3 +16,4 @@ C:\Users\Parth Shinde\AppData\Local\Voidstar\FilePilot
 C:\Users\Parth Shinde\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\Scripts
 C:\Users\Parth Shinde\AppData\Local\Programs\Microsoft VS Code\bin
 C:\Users\Parth Shinde\AppData\Roaming\npm
+C:\Program Files\coreutils\cmd

@@ -1,5 +1,5 @@
 ﻿MANUAL INSTALL CHECKLIST
-Generated: 2026-06-04 14:08:37
+Generated: 2026-06-04 16:41:00
 Computer: PARTYBOY
 
 These programs could not be automatically matched to a winget ID.
