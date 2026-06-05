@@ -1,0 +1,277 @@
+===========================================================================
+ WINDOWS PC SETUP BACKUP — Everything needed for watch.ps1 to work
+===========================================================================
+
+Last updated: 2026-06-05 (v2 — official mpv CI build, auto-fallback, all ASCII)
+
+===========================================================================
+ 1. PREREQUISITES — Install these first
+===========================================================================
+
+--- mpv player (official CI build, NOT mpv.net) ---
+  winget install "mpv-player.mpv-CI.MSVC"
+This installs mpv.com + mpv.exe (v0.41.0+). Not mpv.net (which exposes mpvnet.exe).
+
+--- Node.js (LTS) ---
+  winget install OpenJS.NodeJS.LTS
+Or from: https://nodejs.org/
+
+--- aria2c (fast C++ downloader, fallback engine) ---
+  winget install aria2.aria2
+Or: choco install aria2
+
+--- Global npm packages ---
+  npm install -g peerflix
+
+--- Local npm dependencies ---
+  cd D:\scripts
+  npm install                   (uses package.json, pinned to webtorrent@1.9.4)
+
+Note: Version is pinned to 1.9.4 because webtorrent 2.x+ dropped
+File.createServer() which the streaming engine relies on.
+
+===========================================================================
+ 2. FILES — D:\scripts directory
+===========================================================================
+
+D:\scripts\               (also at D:\opencode\MaelStream\ — GitHub repo)
+├── watch.ps1                    MAIN (~334 lines) — search TPB + auto-fallback stream
+├── stream-webtorrent.js         ENGINE 1 — WebTorrent Node.js library (~122 lines)
+├── stream-server.js             ENGINE 3 helper — HTTP server for aria2c partial files (~93 lines)
+├── setup.ps1                    One-command dependency installer (winget + npm)
+├── package.json                 npm metadata (webtorrent pinned to 1.9.4)
+├── package-lock.json            pinned dep versions
+├── node_modules\                webtorrent + dependencies
+│
+├── lock.bat                     Lock PC (triggers scheduled task)
+├── lock.ps1                     Lock script (P/Invoke variant)
+├── setup_lock_task.ps1          One-time admin: create LockPC scheduled task
+├── automate.bat                 Lock + clear clipboard + kill browsers + shutdown
+├── mount.bat                    Mount VeraCrypt volume (stash)
+└── unmount.bat                  Dismount VeraCrypt + stop stash
+
+===========================================================================
+ 3. FILE CONTENTS
+===========================================================================
+
+--- D:\scripts\watch.ps1 ---
+----[snip]----
+(see file for full content — ~334 lines)
+
+GitHub repo: https://github.com/Parth412100/MaelStream
+
+Setup (one command):
+  git clone https://github.com/Parth412100/MaelStream.git
+  cd MaelStream
+  .\setup.ps1
+
+Flow:
+  1. Pre-flight check — verifies Node.js, mpv, peerflix, webtorrent module
+  2. Search TPB API (apibay.org?cat=0) for query — NOTE: cat=201 returns empty
+  3. List results with seed counts, sorted by seeders (color-coded)
+  4. User selects option:
+     - Enter/#  → WebTorrent engine (default, auto-fallback ON)
+     - 'p'      → Peerflix engine (no fallback)
+     - 'a'      → aria2c engine (no fallback)
+     - 'q'      → quit
+  5. Stream selected movie via mpv with --cache=yes --cache-secs=120
+
+Auto-fallback chain (when no engine explicitly chosen):
+  WebTorrent (30s timeout) → Peerflix → aria2c → error
+
+Engine details:
+  - WebTorrent (default, engine 1):
+      node stream-webtorrent.js <magnet> <port> <tempDir> <readyFile>
+      Uses webtorrent@1.9.4 npm library (WebRTC + TCP + DHT peer discovery)
+      Picks largest video file (.mkv/.mp4/.avi/.webm/.mov/.m4v/.flv/.wmv)
+      Creates HTTP server with Range/seek support, writes readyFile signal
+      Shows live progress: % | MB/s | ETA | peers
+      Auto-exits after 180s timeout (30s in PowerShell waits for readyFile)
+  - Peerflix (engine 2):
+      peerflix $magnet --mpv -c 200 --remove
+      Battle-tested, uses older torrent-stream backend
+  - Aria2c (engine 3, fallback):
+      aria2c downloads with 16 connections, max 200 peers, seed-time=0
+      Waits up to 120s for first file chunk (>1MB)
+      Then starts node stream-server.js <dir> <totalSize> <port> <readyFile>
+      Serves partial file with Range support for mpv seeking
+      NOTE: aria2c has no --sequential-download for BitTorrent; rarest-first only
+
+Pre-flight dependency check (exits early with instructions if missing):
+  - Node.js (via winget or manual)
+  - mpv (via winget install "mpv-player.mpv-CI.MSVC")
+  - peerflix (npm install -g peerflix)
+  - webtorrent module (npm install in script dir)
+
+All scripts avoid non-ASCII characters — em dashes/curly quotes would break
+PowerShell parser on git clone with default encoding.
+
+--- D:\scripts\stream-webtorrent.js ---
+----[snip]----
+(122 lines)
+Node.js script that:
+  - Takes: magnet, port, tempDir, readyFile
+  - Uses webtorrent library (v1.9.4) to resolve magnet + download
+  - Picks largest video file by extension order: mkv, mp4, avi, webm, mov, m4v, flv, wmv
+  - Creates HTTP server on port with Range header support (206 for seeking)
+  - Full non-range GET streams entire file (for init probes)
+  - Writes readyFile when server.listen() fires
+  - Progress interval every 2s: %, GB, MB/s, downloaded, ETA, peers
+  - Auto-exits after 180s if no peers found
+  - Handles client.on('error') for invalid magnets
+  - SIGTERM/SIGINT: clean shutdown via client.destroy()
+  - Disables uTP (utp: false) — TCP-only for reliability
+
+--- D:\scripts\stream-server.js ---
+----[snip]----
+(93 lines)
+Node.js script that:
+  - Takes: downloadDir, totalFileSize, port[, readyFile]
+  - readyFile arg (optional 5th): writes 'ready' when server.listen() fires
+  - Monitors file size via fs.stat every 1s
+  - Picks largest file (excluding .aria2 temp files)
+  - Serves partial file with Range request support (206 responses)
+  - Returns 416 for unavailable byte ranges (mpv handles buffering)
+  - Non-range requests serve full available content
+  - Bare try/catch on all file ops (returns 0 size or 404 on error)
+
+--- D:\scripts\lock.bat ---
+  schtasks /run /tn "LockPC"   (auto-setup if missing)
+
+--- D:\scripts\lock.ps1 ---
+  Start-Process rundll32.exe user32.dll,LockWorkStation
+
+--- D:\scripts\setup_lock_task.ps1 ---
+  Creates "LockPC" scheduled task that runs rundll32.exe LockWorkStation
+
+--- D:\scripts\automate.bat ---
+  Lock PC + clear clipboard + flush DNS + kill browsers + shutdown
+
+--- D:\scripts\mount.bat ---
+  Mount VeraCrypt volume D:\stash\stash.txt -> drive H:
+
+--- D:\scripts\unmount.bat ---
+  Dismount all VeraCrypt volumes + kill stash-win.exe
+
+===========================================================================
+ 4. USAGE
+===========================================================================
+
+--- Stream a movie ---
+  cd D:\scripts
+  .\watch.ps1 "mortal kombat 2021"
+  # Enter number to select, Enter for best (#0)
+  # 'p' for peerflix, 'a' for aria2c, 'q' to quit
+
+--- Auto-select best result ---
+  .\watch.ps1 "movie name" -Auto
+
+--- Lock PC remotely (from SSH) ---
+  D:\scripts\lock.bat
+
+--- Mount/unmount VeraCrypt ---
+  D:\scripts\mount.bat
+  D:\scripts\unmount.bat
+
+===========================================================================
+ 5. API ENDPOINTS
+===========================================================================
+
+TPB Search API:     https://apibay.org/q.php?q=<query>&cat=0
+  NOTE: cat=201 (movies) returns empty. Use cat=0 (all) instead.
+
+Trackers used (12 total):
+  UDP:
+    udp://tracker.opentrackr.org:1337/announce
+    udp://tracker.openbittorrent.com:80
+    udp://tracker.torrent.eu.org:451
+    udp://open.demonii.com:1337
+    udp://exodus.desync.com:6969
+    udp://tracker.moeking.me:6969
+    udp://tracker.dler.org:6969
+    udp://tracker.altrosky.nl:6969/announce
+    udp://tracker.qu.ax:6969/announce
+  HTTPS:
+    https://tracker.tamersunion.org:443/announce
+  WebSocket:
+    wss://tracker.btorrent.xyz
+    wss://tracker.openwebtorrent.com
+
+Dead trackers removed:
+  tracker.coppersurfer.tk (tk domain defunct)
+  tracker.leechers-paradise.org (dead)
+  tracker.publicbt.com (dead)
+  tracker.tiny-vps.com (dead)
+
+===========================================================================
+ 6. TROUBLESHOOTING
+===========================================================================
+
+--- "Connection refused" / mpv can't connect ---
+  WebTorrent needs time to find peers. If no peers found:
+  - Pick a torrent with 200+ seeders
+  - Check Windows Firewall: allow node.exe, aria2c.exe on Private networks
+  - Try 'p' for peerflix engine instead
+  - Auto-fallback handles this: WebTorrent -> Peerflix -> aria2c
+
+--- "TypeError: file.createServer is not a function" ---
+  WebTorrent 2.x dropped File.createServer(). Run:
+  npm install webtorrent@1.9.4
+  (package.json pins to 1.9.4, but check if npm resolved a newer version)
+
+--- "Missing token" / aria2c finds 0 peers ---
+  ISP may block UDP tracker traffic. WebTorrent uses WebRTC (bypasses this).
+  aria2c is only usable as fallback when other engines fail.
+  ProtonVPN datacenter IPs also blocked by swarms — disconnect VPN for better P2P.
+
+--- "All engines failed: webtorrent, peerflix, aria2c" ---
+  ISP is blocking P2P entirely. Solutions:
+  - Try torrent with 500+ seeders
+  - Use VPN with P2P-optimized server (paid ProtonVPN, Mullvad)
+  - Use debrid service (Real-Debrid ~$4/month) — caches via HTTPS
+  - Try from different network (mobile hotspot)
+
+--- "mpv.net installs as mpvnet.exe, not mpv.exe" ---
+  Don't use mpv.net. Install official CI build:
+  winget install "mpv-player.mpv-CI.MSVC"
+  This gives you mpv.com + mpv.exe, not mpvnet.exe.
+
+--- Setup.ps1 download times out ---
+  shinchiro.mpv / GitHub downloads may time out from this network.
+  Alternative: install mpv.net and copy mpvnet.exe -> mpv.exe, or retry.
+  Official CI build (mpv-player.mpv-CI.MSVC) downloads ~73 MB.
+
+--- Killed processes ---
+  Run: Get-Process node,aria2c,mpv | Stop-Process -Force
+
+--- "Cannot find webtorrent module" ---
+  Run: cd D:\scripts && npm install
+  (uses package.json, webtorrent pinned to 1.9.4)
+
+--- Non-ASCII characters break PowerShell ---
+  If git clone shows "Missing closing ')': if ($proc.HasExited -and !",
+  the file has em dashes (U+2014) or curly quotes. All MaelStream scripts
+  use only ASCII characters to avoid this.
+
+--- "EPERM: operation not permitted" on npm install ---
+  The ip-set package in webtorrent's dependency chain calls only-allow pnpm.
+  Use webtorrent@1.9.4 (older version that avoids this).
+  Fixed by pinning to 1.9.4 in package.json.
+
+--- "peerflix is exiting" immediately ---
+  Malformed magnet or tracker list too long. Auto-fallback handles this:
+  WebTorrent or aria2c will be tried next.
+
+--- "aria2c: unknown option -- sequential-download=true" ---
+  --sequential-download doesn't exist for BitTorrent (HTTP/FTP only).
+  Removed. aria2c downloads rarest-first; Node.js server handles seeking.
+
+--- WinError 10061 (Connection refused) ---
+  mpv started before the HTTP server was ready. Fixed by:
+  - readyFile mechanism: Node.js writes a marker file when server.listen() fires
+  - PowerShell polls for readyFile (30s timeout) before launching mpv
+  - Both WebTorrent and aria2c engines use this now
+
+===========================================================================
+ END OF BACKUP
+===========================================================================
