@@ -4,6 +4,7 @@ param(
     [switch]$IncludeWallpaper,
     [switch]$Silent,
     [switch]$SkipAniCli,
+    [switch]$SkipMaelStream,
     [switch]$DryRun
 )
 
@@ -51,6 +52,7 @@ function Invoke-Restore {
     if ($Silent) { $args += "-Silent" }
     if ($DryRun) { $args += "-DryRun" }
     if ($SkipAniCli) { $args += "-SkipAniCli" }
+    if ($SkipMaelStream) { $args += "-SkipMaelStream" }
     & powershell -ExecutionPolicy Bypass -File $restoreScript @args
     if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
         Write-Host "Restore completed with warnings." -ForegroundColor Yellow
@@ -76,6 +78,7 @@ OPTIONS
   -Silent             (restore) Suppress console output
   -DryRun             (restore) Show what would be done without applying
   -SkipAniCli         (restore) Skip ani-cli/anime setup
+  -SkipMaelStream     (restore) Skip MaelStream torrent CLI setup
 
 EXAMPLES
   .\setup.ps1 -Backup

@@ -2,7 +2,8 @@ param(
     [string]$BackupDir = "$PSScriptRoot",
     [switch]$DryRun,
     [switch]$Silent,
-    [switch]$SkipAniCli
+    [switch]$SkipAniCli,
+    [switch]$SkipMaelStream
 )
 
 $log = "$BackupDir\restore.log"
@@ -439,7 +440,7 @@ if (Test-Path $defFile) {
 # STEP 9: SET UP ANI-CLI (optional, skip with -SkipAniCli)
 # ══════════════════════════════════════════════════════════════════
 if (-not $SkipAniCli) {
-Write-Log "`n[9/9] Setting up ani-cli..."
+Write-Log "`n[9/10] Setting up ani-cli..."
 
 if (-not $DryRun) {
     # Install scoop if not present
@@ -530,6 +531,50 @@ ANI_CLI_DOWNLOAD_DIR="`${1:-.}" $msysDir/ani-cli "`${@:2}"
     Write-Log "  ani-cli setup complete!"
 } else {
     Write-Log "  [DRY RUN] Would install: scoop, fzf, ffmpeg, aria2, yt-dlp, mpv, ani-cli"
+}
+}
+
+# ══════════════════════════════════════════════════════════════════
+if (-not $SkipMaelStream) {
+Write-Log "`n[10/10] Setting up MaelStream..."
+
+if (-not $DryRun) {
+    $maelDir = "$env:USERPROFILE\.maelstream"
+    if (-not (Test-Path "$maelDir\watch.ps1")) {
+        New-Item -ItemType Directory -Path $maelDir -Force | Out-Null
+        $cloneResult = Invoke-WithTimeout { git clone https://github.com/Parth412100/MaelStream.git $maelDir 2>$null } 120 "git clone MaelStream"
+        if ($null -ne $cloneResult) {
+            Write-Log "  MaelStream cloned to $maelDir"
+            Push-Location $maelDir
+            $npmResult = Invoke-WithTimeout { npm install 2>$null } 120 "npm install MaelStream"
+            if ($null -ne $npmResult) {
+                Write-Log "  MaelStream dependencies installed (npm install)"
+            } else {
+                Write-Log "  MaelStream npm install timed out, skipping"
+            }
+            Pop-Location
+        } else {
+            Write-Log "  MaelStream clone timed out, skipping"
+        }
+    } else {
+        Write-Log "  MaelStream already cloned, pulling latest..."
+        Push-Location $maelDir
+        git pull 2>$null
+        npm install 2>$null | Out-Null
+        Pop-Location
+        Write-Log "  MaelStream updated"
+    }
+    $scriptDir = Split-Path -Parent $PSCommandPath
+    $wrapper = "$scriptDir\maelstream.cmd"
+    @"
+@echo off
+cd /d "$maelDir"
+pwsh -NoProfile -ExecutionPolicy Bypass -File ".\watch.ps1" %*
+"@ | Out-File $wrapper -Encoding ascii -Force
+    Write-Log "  MaelStream cmd wrapper created at $wrapper"
+    Write-Log "  MaelStream setup complete!"
+} else {
+    Write-Log "  [DRY RUN] Would clone MaelStream + npm install"
 }
 }
 
