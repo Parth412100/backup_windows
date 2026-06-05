@@ -466,7 +466,7 @@ if (-not $DryRun) {
     # Install mpv via winget if not found
     if (-not (Get-Command mpv -ErrorAction SilentlyContinue)) {
         Write-Host "  Installing mpv..."
-        Invoke-WithTimeout { winget install mpv --accept-source-agreements 2>$null } 300 "winget install mpv" | Out-Null
+        Invoke-WithTimeout { winget install "mpv-player.mpv-CI.MSVC" --accept-source-agreements 2>$null } 300 "winget install mpv-player.mpv-CI.MSVC" | Out-Null
         Write-Log "  mpv installed via winget"
     }
 

@@ -191,7 +191,7 @@ try {
         'Zoom'                = 'Zoom.Zoom'
         'Wireshark'           = 'WiresharkFoundation.Wireshark'
         'ffmpeg'              = 'FFmpeg.FFmpeg'
-        'mpv'                 = 'mpv.Mpv'
+        'mpv'                 = 'mpv-player.mpv-CI.MSVC'
         'GIMP'                = 'GIMP.GIMP'
         'Inkscape'            = 'Inkscape.Inkscape'
         'Blender'             = 'BlenderFoundation.Blender'
