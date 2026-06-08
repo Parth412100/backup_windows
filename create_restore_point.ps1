@@ -1,6 +1,18 @@
 param(
-    [string]$RestorePointDir = "$PSScriptRoot\restore_points"
+    [string]$RestorePointDir = "$PSScriptRoot\restore_points",
+    [int]$KeepLast = 3
 )
+
+# Auto-clean old snapshots, keep only the most recent $KeepLast
+$existing = Get-ChildItem -Path $RestorePointDir -Directory -Filter "snapshot_*" -ErrorAction SilentlyContinue |
+    Sort-Object Name -Descending
+if ($existing.Count -ge $KeepLast) {
+    $toRemove = $existing[$KeepLast..($existing.Count - 1)]
+    foreach ($dir in $toRemove) {
+        Remove-Item -Path $dir.FullName -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  Removed old snapshot: $($dir.Name)"
+    }
+}
 
 $ts = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $snapDir = "$RestorePointDir\snapshot_$ts"
