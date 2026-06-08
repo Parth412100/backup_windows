@@ -69,20 +69,31 @@ if ($Restore) { Invoke-Restore; exit }
 # No mode specified — show help
 Write-Host @"
 
-USAGE
-  .\setup.ps1 -Backup                 # Backup current machine config
-  .\setup.ps1 -Restore                # Restore config on a fresh install
+  ╔══════════════════════════════════════════════════╗
+  ║  WINDOWS SETUP — Backup & Restore               ║
+  ║  Save your PC setup. Restore after a clean wipe. ║
+  ╚══════════════════════════════════════════════════╝
 
-OPTIONS
-  -IncludeWallpaper   (backup) Include wallpaper image (may be large)
-  -Silent             (restore) Suppress console output
-  -DryRun             (restore) Show what would be done without applying
-  -SkipAniCli         (restore) Skip ani-cli/anime setup
-  -SkipMaelStream     (restore) Skip MaelStream torrent CLI setup
+  WHAT DO YOU WANT TO DO?
 
-EXAMPLES
-  .\setup.ps1 -Backup
-  .\setup.ps1 -Restore -SkipAniCli
-  .\setup.ps1 -Restore -DryRun
+  📤  Backup your current PC
+      .\setup.ps1 -Backup
+      Saves your settings, apps, themes, configs, etc.
+
+  📥  Restore after a clean Windows install
+      .\setup.ps1 -Restore
+      Re-installs everything from your last backup.
+
+  OPTIONS
+      -IncludeWallpaper   (backup)   Save wallpaper image too
+      -DryRun             (restore)  Preview without applying
+      -Silent             (restore)  No screen output, just log
+      -SkipAniCli         (restore)  Skip anime streaming setup
+      -SkipMaelStream     (restore)  Skip torrent streaming setup
+
+  FIRST TIME?
+    1. Run .\setup.ps1 -Backup on your current machine
+    2. Git commit & push to save it
+    3. After wiping, clone and run .\setup.ps1 -Restore
 
 "@
