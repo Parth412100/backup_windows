@@ -1,6 +1,8 @@
+[CmdletBinding(DefaultParameterSetName='Help')]
 param(
-    [Parameter(Mandatory, ParameterSetName='Backup')][switch]$Backup,
-    [Parameter(Mandatory, ParameterSetName='Restore')][switch]$Restore,
+    [Parameter(ParameterSetName='Backup')][switch]$Backup,
+    [Parameter(ParameterSetName='Restore')][switch]$Restore,
+    [Parameter(ParameterSetName='Help')][switch]$Help,
     [switch]$IncludeWallpaper,
     [switch]$Silent,
     [switch]$SkipAniCli,
@@ -66,7 +68,7 @@ Write-Banner
 if ($Backup) { Invoke-Backup; exit }
 if ($Restore) { Invoke-Restore; exit }
 
-# No mode specified — show help
+# No valid mode or -Help — show help
 Write-Host @"
 
   ╔══════════════════════════════════════════════════╗
@@ -76,11 +78,11 @@ Write-Host @"
 
   WHAT DO YOU WANT TO DO?
 
-  📤  Backup your current PC
+  [B] Backup your current PC
       .\setup.ps1 -Backup
       Saves your settings, apps, themes, configs, etc.
 
-  📥  Restore after a clean Windows install
+  [R] Restore after a clean Windows install
       .\setup.ps1 -Restore
       Re-installs everything from your last backup.
 

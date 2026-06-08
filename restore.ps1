@@ -42,7 +42,8 @@ function Ensure-Admin {
                 "-BackupDir `"$BackupDir`"",
                 $(if ($Silent) { "-Silent" }),
                 $(if ($DryRun) { "-DryRun" }),
-                $(if ($SkipAniCli) { "-SkipAniCli" })
+                $(if ($SkipAniCli) { "-SkipAniCli" }),
+                $(if ($SkipMaelStream) { "-SkipMaelStream" })
             ) -Wait
             exit
         }
@@ -526,8 +527,8 @@ head -n 1
     $msysScoop = $env:USERPROFILE -replace '^([A-Z]):', '/$1' -replace '\\', '/'
     @"
 #!/usr/bin/env bash
-export PATH="$fakeBin:`$PATH"
-export PATH="`$PATH:$msysScoop/scoop/shims"
+export PATH="${fakeBin}:`$PATH"
+export PATH="`$PATH:${msysScoop}/scoop/shims"
 ANI_CLI_DOWNLOAD_DIR="`${1:-.}" $msysDir/ani-cli "`${@:2}"
 "@ | Out-File "$aniCliDir\run-ani.sh" -Encoding ascii -Force
     Write-Log "  ani-cli launcher created at $aniCliDir\run-ani.sh"
