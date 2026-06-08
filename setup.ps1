@@ -7,7 +7,8 @@ param(
     [switch]$Silent,
     [switch]$SkipAniCli,
     [switch]$SkipMaelStream,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$Resume
 )
 
 $ErrorActionPreference = "Continue"
@@ -55,6 +56,7 @@ function Invoke-Restore {
     if ($DryRun) { $args += "-DryRun" }
     if ($SkipAniCli) { $args += "-SkipAniCli" }
     if ($SkipMaelStream) { $args += "-SkipMaelStream" }
+    if ($Resume) { $args += "-Resume" }
     & powershell -ExecutionPolicy Bypass -File $restoreScript @args
     if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
         Write-Host "Restore completed with warnings." -ForegroundColor Yellow
@@ -92,6 +94,7 @@ Write-Host @"
       -Silent             (restore)  No screen output, just log
       -SkipAniCli         (restore)  Skip anime streaming setup
       -SkipMaelStream     (restore)  Skip torrent streaming setup
+      -Resume             (restore)  Skip completed steps, resume from failure
 
   FIRST TIME?
     1. Run .\setup.ps1 -Backup on your current machine
