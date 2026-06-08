@@ -64,6 +64,22 @@ Write-Log "========================================================"
 if ($DryRun) { Write-Log "  *** DRY RUN - no changes applied ***" }
 
 # ══════════════════════════════════════════════════════════════════
+# STEP 0a: CREATE PRE-RESTORE SNAPSHOT
+# ══════════════════════════════════════════════════════════════════
+Write-Log "`n[Pre] Creating pre-restore system snapshot..."
+$rpScript = "$BackupDir\create_restore_point.ps1"
+if (Test-Path $rpScript) {
+    if (-not $DryRun) {
+        & powershell -ExecutionPolicy Bypass -File $rpScript
+        Write-Log "  Pre-restore snapshot saved to restore_points/"
+    } else {
+        Write-Log "  [DRY RUN] Would create pre-restore snapshot"
+    }
+} else {
+    Write-Log "  create_restore_point.ps1 not found, skipping snapshot"
+}
+
+# ══════════════════════════════════════════════════════════════════
 # STEP 0: INSTALL PACKAGE MANAGERS
 # ══════════════════════════════════════════════════════════════════
 Write-Log "`n[0/9] Ensuring package managers are installed..."
