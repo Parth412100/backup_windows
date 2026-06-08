@@ -67,18 +67,19 @@ function Ensure-Admin {
     if (-not $p.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         if (-not $DryRun) {
             Write-Host "Elevating to Administrator..."
-            Start-Process powershell -Verb RunAs -ArgumentList @(
+            $argList = @(
                 "-ExecutionPolicy Bypass",
                 "-NoProfile",
                 "-File `"$($MyInvocation.MyCommand.Path)`"",
-                "-BackupDir `"$BackupDir`"",
-                $(if ($Silent) { "-Silent" }),
-                $(if ($DryRun) { "-DryRun" }),
-                $(if ($SkipAniCli) { "-SkipAniCli" }),
-                $(if ($SkipMaelStream) { "-SkipMaelStream" }),
-                $(if ($Resume) { "-Resume" }),
-                $(if ($Fresh) { "-Fresh" })
-            ) -Wait
+                "-BackupDir `"$BackupDir`""
+            )
+            if ($Silent) { $argList += "-Silent" }
+            if ($DryRun) { $argList += "-DryRun" }
+            if ($SkipAniCli) { $argList += "-SkipAniCli" }
+            if ($SkipMaelStream) { $argList += "-SkipMaelStream" }
+            if ($Resume) { $argList += "-Resume" }
+            if ($Fresh) { $argList += "-Fresh" }
+            Start-Process powershell -Verb RunAs -ArgumentList $argList -Wait
             exit
         }
     }
