@@ -97,10 +97,11 @@ Everything from backup plus:
 ### Restore
 
 ```powershell
-.\setup.ps1 -Restore                # Full restore
-.\setup.ps1 -Restore -DryRun        # Preview only — don't apply anything
-.\setup.ps1 -Restore -Silent        # No console output, just logging
-.\setup.ps1 -Restore -SkipAniCli    # Skip ani-cli anime setup
+.\setup.ps1 -Restore                 # Full restore
+.\setup.ps1 -Restore -DryRun         # Preview only — don't apply anything
+.\setup.ps1 -Restore -Silent         # No console output, just logging
+.\setup.ps1 -Restore -Resume         # Skip completed steps, resume from failure
+.\setup.ps1 -Restore -SkipAniCli     # Skip ani-cli anime setup
 .\setup.ps1 -Restore -SkipMaelStream # Skip MaelStream torrent setup
 ```
 
@@ -130,6 +131,28 @@ Everything from backup plus:
 
 ---
 
+## Checkpoint System
+
+If the restore fails halfway (e.g., power loss, internet drop), you don't need
+to start from scratch.
+
+1. Fix whatever caused the failure
+2. Re-run with `-Resume`:
+   ```powershell
+   .\setup.ps1 -Restore -Resume
+   ```
+
+The script saves a checkpoint after each successful step. With `-Resume`, it
+reads the checkpoint file and skips everything already done.
+
+**Checkpoint file**: `.restore_checkpoint` (auto-created in the repo folder,
+ignored by git).
+
+To redo a full restore, just run without `-Resume` — the checkpoint is cleared
+at the start.
+
+---
+
 ## FAQ — for beginners
 
 ### Do I need to install anything first?
@@ -150,6 +173,15 @@ Run with `-DryRun` first to preview everything:
 .\setup.ps1 -Restore -DryRun
 ```
 This shows what would happen without making any changes.
+
+### The restore failed halfway. Do I have to start over?
+No. Fix the issue (e.g., install a missing dependency, check your internet),
+then re-run with `-Resume`:
+```powershell
+.\setup.ps1 -Restore -Resume
+```
+This skips already-completed steps and continues where it left off.
+Each step saves a checkpoint so you don't lose progress.
 
 ### Can I undo the restore?
 The `restore_points/` folder contains a snapshot of your registry and system
