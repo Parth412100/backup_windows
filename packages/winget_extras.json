@@ -1,5 +1,5 @@
 ﻿{
-    "CreationDate":  "2026-06-04T11:11:00.4968758Z",
+    "CreationDate":  "2026-06-08T04:11:59.5531533Z",
     "Sources":  [
                     {
                         "SourceDetails":  {
@@ -9,6 +9,9 @@
                                               "Identifier":  "Microsoft.Winget.Source_8wekyb3d8bbwe"
                                           },
                         "Packages":  [
+                                         {
+                                             "PackageIdentifier":  "mpv-player.mpv-CI.MSVC"
+                                         },
                                          {
                                              "PackageIdentifier":  "VideoLAN.VLC"
                                          },

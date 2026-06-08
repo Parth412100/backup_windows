@@ -3,3 +3,4 @@
 "RiotClient","C:\Riot Games\Riot Client\RiotClientServices.exe --launch-background-mode"
 "BingSvc","C:\Users\Parth Shinde\AppData\Local\Microsoft\BingSvc\BingSvc.exe"
 "IDMan","C:\Program Files (x86)\Internet Download Manager\IDMan.exe /onboot"
+"electron.app.Notion","""C:\Users\Parth Shinde\AppData\Local\Programs\Notion\Notion.exe"" --open-at-login"

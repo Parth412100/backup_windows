@@ -1,5 +1,5 @@
 ﻿MANUAL INSTALL CHECKLIST
-Generated: 2026-06-04 16:41:00
+Generated: 2026-06-08 09:41:59
 Computer: PARTYBOY
 
 These programs could not be automatically matched to a winget ID.
@@ -9,7 +9,9 @@ Install them manually after restore.
 - Android System Key Verifier
 - Android System WebView
 - Drive
+- fd
 - Freedom Fighters
+- fzf
 - Genshin Impact
 - Google
 - Google Partner Setup
@@ -21,7 +23,6 @@ Install them manually after restore.
 - Microsoft Visual Studio Installer
 - Microsoft Visual Studio Setup Configuration
 - Microsoft Visual Studio Setup WMI Provider
-- Mozilla Maintenance Service
 - Need for Speed - Underground 2
 - Need for Speed - Underground 2 Fix
 - NitroSense Config
@@ -47,4 +48,5 @@ Install them manually after restore.
 - Windows SDK AddOn
 - Windows Subsystem for Linux
 - YouTube
+- zoxide
 
