@@ -8,7 +8,8 @@ param(
     [switch]$SkipAniCli,
     [switch]$SkipMaelStream,
     [switch]$DryRun,
-    [switch]$Resume
+    [switch]$Resume,
+    [switch]$Fresh
 )
 
 $ErrorActionPreference = "Continue"
@@ -57,6 +58,7 @@ function Invoke-Restore {
     if ($SkipAniCli) { $args += "-SkipAniCli" }
     if ($SkipMaelStream) { $args += "-SkipMaelStream" }
     if ($Resume) { $args += "-Resume" }
+    if ($Fresh) { $args += "-Fresh" }
     & powershell -ExecutionPolicy Bypass -File $restoreScript @args
     if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
         Write-Host "Restore completed with warnings." -ForegroundColor Yellow
@@ -95,6 +97,7 @@ Write-Host @"
       -SkipAniCli         (restore)  Skip anime streaming setup
       -SkipMaelStream     (restore)  Skip torrent streaming setup
       -Resume             (restore)  Skip completed steps, resume from failure
+      -Fresh              (restore)  Ignore checkpoint, run all steps fresh
 
   FIRST TIME?
     1. Run .\setup.ps1 -Backup on your current machine

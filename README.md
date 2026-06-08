@@ -97,10 +97,10 @@ Everything from backup plus:
 ### Restore
 
 ```powershell
-.\setup.ps1 -Restore                 # Full restore
+.\setup.ps1 -Restore                 # Full restore (auto-resume if checkpoint exists)
 .\setup.ps1 -Restore -DryRun         # Preview only — don't apply anything
+.\setup.ps1 -Restore -Fresh          # Ignore checkpoint, run all steps
 .\setup.ps1 -Restore -Silent         # No console output, just logging
-.\setup.ps1 -Restore -Resume         # Skip completed steps, resume from failure
 .\setup.ps1 -Restore -SkipAniCli     # Skip ani-cli anime setup
 .\setup.ps1 -Restore -SkipMaelStream # Skip MaelStream torrent setup
 ```
@@ -134,22 +134,24 @@ Everything from backup plus:
 ## Checkpoint System
 
 If the restore fails halfway (e.g., power loss, internet drop), you don't need
-to start from scratch.
+to start from scratch. The script **automatically detects** the checkpoint file
+and resumes where it left off.
 
 1. Fix whatever caused the failure
-2. Re-run with `-Resume`:
+2. Re-run restore:
    ```powershell
-   .\setup.ps1 -Restore -Resume
+   .\setup.ps1 -Restore
    ```
+   The script detects the checkpoint and skips already-completed steps.
 
-The script saves a checkpoint after each successful step. With `-Resume`, it
-reads the checkpoint file and skips everything already done.
+To force a fresh run (ignore checkpoint):
+```powershell
+.\setup.ps1 -Restore -Fresh
+```
 
-**Checkpoint file**: `.restore_checkpoint` (auto-created in the repo folder,
-ignored by git).
-
-To redo a full restore, just run without `-Resume` — the checkpoint is cleared
-at the start.
+**How it works**: Each successful step saves a checkpoint to `.restore_checkpoint`
+(auto-created, ignored by git). On next run, the script checks for this file.
+If found, it auto-enables resume mode. Use `-Fresh` to clear it and start over.
 
 ---
 
@@ -175,13 +177,13 @@ Run with `-DryRun` first to preview everything:
 This shows what would happen without making any changes.
 
 ### The restore failed halfway. Do I have to start over?
-No. Fix the issue (e.g., install a missing dependency, check your internet),
-then re-run with `-Resume`:
+No. The script **automatically resumes** from where it left off.
+Just fix the issue and run restore again:
 ```powershell
-.\setup.ps1 -Restore -Resume
+.\setup.ps1 -Restore
 ```
-This skips already-completed steps and continues where it left off.
-Each step saves a checkpoint so you don't lose progress.
+The checkpoint file is detected and completed steps are skipped automatically.
+Use `-Fresh` if you want to restart from scratch.
 
 ### Can I undo the restore?
 The `restore_points/` folder contains a snapshot of your registry and system

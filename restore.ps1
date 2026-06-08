@@ -4,7 +4,8 @@ param(
     [switch]$Silent,
     [switch]$SkipAniCli,
     [switch]$SkipMaelStream,
-    [switch]$Resume
+    [switch]$Resume,
+    [switch]$Fresh
 )
 
 $log = "$BackupDir\restore.log"
@@ -48,7 +49,7 @@ function Save-Checkpoint {
 
 function Test-Checkpoint {
     param([string]$Step)
-    if (-not $Resume) { return $false }
+    if ($DryRun) { return $false }
     if (-not (Test-Path $checkpointFile)) { return $false }
     $completed = Get-Content $checkpointFile
     return $completed -contains $Step
@@ -75,7 +76,8 @@ function Ensure-Admin {
                 $(if ($DryRun) { "-DryRun" }),
                 $(if ($SkipAniCli) { "-SkipAniCli" }),
                 $(if ($SkipMaelStream) { "-SkipMaelStream" }),
-                $(if ($Resume) { "-Resume" })
+                $(if ($Resume) { "-Resume" }),
+                $(if ($Fresh) { "-Fresh" })
             ) -Wait
             exit
         }
@@ -92,11 +94,6 @@ function Write-Troubleshoot {
     Write-Log "  TIP: $Hint"
 }
 
-# If starting fresh (not resume), clear old checkpoints
-if (-not $Resume -and -not $DryRun) {
-    Clear-Checkpoints
-}
-
 # ─── ELEVATE ──────────────────────────────────────────────────────
 if (-not $DryRun) { Ensure-Admin }
 
@@ -105,7 +102,22 @@ Write-Log "  WINDOWS RESTORE - Fresh Install Setup"
 Write-Log "  Backup: $BackupDir"
 Write-Log "========================================================"
 if ($DryRun) { Write-Log "  *** DRY RUN - no changes applied ***" }
-if ($Resume) { Write-Log "  *** RESUME MODE - skipping completed steps ***" }
+
+# Auto-detect checkpoint: resume from last failure if checkpoint exists
+$hasCheckpoint = Test-Path $checkpointFile
+if ($Fresh) {
+    if ($DryRun) {
+        Write-Log "  [DRY RUN] Would clear checkpoint and run all steps"
+    } else {
+        Clear-Checkpoints
+        Write-Log "  *** FRESH MODE - checkpoint cleared, running all steps ***"
+    }
+} elseif ($hasCheckpoint -and -not $DryRun) {
+    $completedSteps = (Get-Content $checkpointFile | Where-Object { $_ }).Count
+    Write-Log "  *** RESUME DETECTED ($completedSteps steps completed) - skipping finished steps ***"
+    Write-Log "  *** Use -Fresh to restart from scratch ***"
+    $Resume = $true
+}
 
 # ══════════════════════════════════════════════════════════════════
 # STEP 0a: CREATE PRE-RESTORE SNAPSHOT
